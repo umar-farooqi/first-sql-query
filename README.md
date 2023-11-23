@@ -1,2 +1,3 @@
 # first-sql-query
-Select * from All_Codes
+Select * from ALL_CODES;
+Select * from universal;
