@@ -1,4 +1,13 @@
 select * from oracle apex
+
+SELECT * 
+FROM DUAL
+WHERE 
+AND 
+GROUP BY 
+HAVING CLUSE
+ORDER BY 
+
 ====================================================
 Dashboard code in oracle apex 
 
