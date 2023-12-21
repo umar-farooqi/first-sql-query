@@ -9,7 +9,7 @@ HAVING CLUSE
 ORDER BY 
 
 ====================================================
-Dashboard code in oracle apex 
+Dashboard code in oracle apex   housing scheme
 
 SELECT  count(DDD.id) VALUE, 'AVAILABLE' LABEL
 FROM DGMS_PLOT_DETAILS DDD
@@ -25,3 +25,32 @@ FROM DGMS_PLOT_DETAILS DDD
  WHERE DDD.ORG_ID = :P_ORG_ID
  and DDD.PLOT_TYPE IS NULL
  GROUP BY BOOKING_STATUS;
+======================================================================================
+
+
+SELECT
+  VALUE,
+  LABEL,
+  CASE
+    WHEN VALUE > 100 THEN 'GOLD'
+    ELSE 'green'
+  END AS STATUS
+FROM (
+  SELECT
+    COUNT(DDD.id) AS VALUE,
+    'AVAILABLE' AS LABEL
+  FROM DGMS_PLOT_DETAILS DDD
+  LEFT JOIN DGMS_PLOTS_BOOKING DPB ON DPB.PLOT_ID = DDD.ID AND BOOKING_STATUS = 'BOOKED'
+  WHERE DPB.PLOT_ID IS NULL AND DDD.PLOT_TYPE IS NULL
+  GROUP BY 'AVAILABLE'
+
+  UNION ALL
+
+  SELECT
+    COUNT(DDD.id) AS VALUE,
+    'SOLD' AS LABEL
+  FROM DGMS_PLOT_DETAILS DDD
+  JOIN DGMS_PLOTS_BOOKING DPB ON DPB.PLOT_ID = DDD.ID AND BOOKING_STATUS = 'BOOKED'
+  WHERE DDD.PLOT_TYPE IS NULL
+  GROUP BY 'SOLD'
+) subquery;
