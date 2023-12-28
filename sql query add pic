@@ -1,1 +1,1 @@
-okay 
+sys.dbms_lob.getlength("DOC_NAME")"DOC_NAME",
