@@ -2,3 +2,5 @@
 290 , 289
 13
 79
+
+javascript:$s('P79_BOOKING_ID','#BOOKING_ID#');javascript:$s('P79_ARREAR','ARREAR NOTICE # 1');
