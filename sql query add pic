@@ -2,3 +2,23 @@ sys.dbms_lob.getlength("DOC_NAME")"DOC_NAME",
 == DATE WISE FILTAR
    AND TRUNC(MAST.CREATED_ON) >=nvl(:P13_FROM_DATE,TRUNC(MAST.CREATED_ON)) 
    AND TRUNC(MAST.CREATED_ON) <=nvl(:P13_TO_DATE,TRUNC(MAST.CREATED_ON))
+
+===========================================================
+DECLARE
+   v_sql varchar2(4000);
+BEGIN
+   IF :P97_TYPE = 'LPC' THEN 
+      v_sql := 'SELECT 
+                   DPD.PLOT_NO, DPD.PLOT_NO AS RETURN
+                FROM DGMS_INVENTORY_MS_HEADER MS
+                JOIN DGMS_PLOT_DETAILS DPD ON MS.PLOT_ID = DPD.ID AND DPD.ORG_ID = :P_ORG_ID
+                JOIN DGMS_PLOTS_BOOKING DPB ON DPB.PLOT_ID = DPD.ID AND DPD.ORG_ID = :P_ORG_ID AND BOOKING_STATUS = ''BOOKED''
+                WHERE MS.TRASACTION_TYPE = ''SOLD'' AND MS.ORG_ID = :P_ORG_ID';
+   ELSE
+      v_sql := 'SELECT DPB.PLOT_NO , DPB.PLOT_NO RETURN
+                FROM  DGMS_PLOTS_BOOKING DPB , DGMS_TRANSFERRED_PLOT DTP
+                WHERE DTP.PLOT_ID = DPB.PLOT_ID AND :P97_TYPE = ''TRANSFER FEE''';
+   END IF; 
+
+   RETURN v_sql;
+END;
