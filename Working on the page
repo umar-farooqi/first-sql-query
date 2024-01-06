@@ -2,5 +2,6 @@
 290 , 289
 13
 79   Alhamdulillah done
+79 page table name DGMS_CLIENT_REMARKS me 3 column add kiye hn arrear1 arrear2  final_reminder
 
 javascript:$s('P79_BOOKING_ID','#BOOKING_ID#');javascript:$s('P79_ARREAR','ARREAR NOTICE # 1');
