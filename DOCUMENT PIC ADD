@@ -1,0 +1,20 @@
+DECLARE
+v_doc_img blob;
+v_doc_file_nm varchar2(300);
+v_doc_mime_typ varchar2(300);
+BEGIN
+IF :P101_DOCUMENT IS NOT NULL THEN
+    SELECT
+        blob_content,FILENAME,MIME_TYPE
+    INTO
+        v_doc_img,v_doc_file_nm,v_doc_mime_typ
+    FROM
+        apex_application_temp_files
+    WHERE
+        name = :P20_DOCUMENT;
+
+    INSERT INTO DGMS_BOOKING_DOCUMENTS( PLOT_ID, DOCUMENT_TYPE, REMARKS, DOCUMENT, DOC_FILE_NAME, DOC_MIME_TYPE) 
+    VALUES(:P101_V_ID,:P20_DOCUMENT_TYPE,:P20_REMARKS_1, v_doc_img, v_doc_file_nm, v_doc_mime_typ);
+    COMMIT;
+END IF; 
+END;
