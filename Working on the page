@@ -6,4 +6,6 @@
 131, 307 
 77, 280, 27, 61 TYPE COLUMNS 
 
+20 FILE ATTACHMENT 
+
 javascript:$s('P79_BOOKING_ID','#BOOKING_ID#');javascript:$s('P79_ARREAR','ARREAR NOTICE # 1');
