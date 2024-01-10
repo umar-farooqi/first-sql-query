@@ -54,3 +54,15 @@ FROM (
   WHERE DDD.PLOT_TYPE IS NULL
   GROUP BY 'SOLD'
 ) subquery;
+
+
+===== with clause 
+WITH JAVASCRIPT AS (
+    SELECT  o.name, o.job_id, o.DISCRIPTION, o.ORACLE_ID, a.CITY, a.BAGS--, a.apex_id
+    FROM apex a
+    JOIN oracle o ON o.oracle_id = a.oracle_id
+)
+
+SELECT J.job_id , P.APEX_NAME, P.APEX_date
+FROM ORACLEAPEX P left JOIN JAVASCRIPT J
+ON J.ORACLE_ID = P.APEX_ID
