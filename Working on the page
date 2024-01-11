@@ -7,5 +7,6 @@
 77, 280, 27, 61 TYPE COLUMNS 
 
 20, 91 FILE ATTACHMENT 
+12
 
 javascript:$s('P79_BOOKING_ID','#BOOKING_ID#');javascript:$s('P79_ARREAR','ARREAR NOTICE # 1');
