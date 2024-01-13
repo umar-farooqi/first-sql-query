@@ -9,3 +9,14 @@ RANK () OVER (ORDER BY DEALER_ID) AS RANKS,
 DENSE_RANK () OVER (ORDER BY DEALER_ID) AS DENSE_RANKS
 FROM DGMS_DEALERS_FORMS
 WHERE ROWNUM <=10
+
+
+=================================
+
+  SELECT
+  file_count,dealer_id, ROW_NUMBER() OVER (ORDER BY file_count) AS row_num
+FROM ( SELECT COUNT(file_id) AS file_count, dealer_id
+  FROM DGMS_DEALERS_FORMS
+  WHERE STATUS IN ('TRANSFERRED', 'APPROVED')
+  GROUP BY dealer_id
+) subquery;
