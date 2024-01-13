@@ -9,6 +9,8 @@
 20, 91 FILE ATTACHMENT 
 12 DATA RADIO BUTTON AGAINST
 
+Countinue working in Dashboard page no 318
+
 javascript:$s('P79_BOOKING_ID','#BOOKING_ID#');javascript:$s('P79_ARREAR','ARREAR NOTICE # 1');
 
 
