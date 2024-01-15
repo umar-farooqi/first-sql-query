@@ -1,0 +1,29 @@
+select 
+    DPB.ID BOOKING_NO,
+    DPD.PLOT_NO PLOT_NO,
+    INITCAP(DPB.CLIENT_REG_NO) CLIENT,
+    ROUND(DPD.MARLA,2)||'  '||'MARLA' "MARLA",
+    DCFR.FTYPE,
+    
+    case when DPCR.ID is not null then 
+        'Cancelled' 
+        ELSE
+        'Not Cancelled' 
+        end AS status,
+    DPCR.id cancel_no,
+    'PRINT' "PRINT",
+   -- 'Cancel Request' CANCEL_REQUEST
+   case when DPCR.ID is null then 
+        'Cancelled' 
+        ELSE
+       NULL 
+        
+
+    END CANCEL_REQUEST
+from DGMS_PLOTS_BOOKING DPB
+JOIN DGMS_PLOT_DETAILS DPD ON DPD.ID = DPB.PLOT_ID AND DPD.ORG_ID = :P_ORG_ID
+LEFT JOIN DGMS_CLIENT_FILE_RETURN DCFR ON DCFR.PLOT_ID = DPD.ID   AND DCFR.ORG_ID = :P_ORG_ID 
+LEFT JOIN DGMS_PLOT_CANCELLATION_REQUEST DPCR ON DPCR.BOOKING_ID = DPB.ID AND DPCR.ORG_ID = :P_ORG_ID
+WHERE BOOKING_STATUS = 'BOOKED' AND DPB.ORG_ID = :P_ORG_ID
+AND  DCFR.TTYPE = 'FILE RECEIVING' 
+order by NVL(DPCR.ID,DPB.ID) DESC
