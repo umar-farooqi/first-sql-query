@@ -12,6 +12,8 @@ NOTE HM HAMESHA DGMS_PLOTS_DETAILS KE TABLE SY HI STATUS LEY GY ur FILE , PLOT B
 20, 91 FILE ATTACHMENT 
 12 DATA RADIO BUTTON AGAINST
 
+page no 32, 266 working button hide show ==
+
 Countinue working in Dashboard page no 318
 
 javascript:$s('P79_BOOKING_ID','#BOOKING_ID#');javascript:$s('P79_ARREAR','ARREAR NOTICE # 1');
