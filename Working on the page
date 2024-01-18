@@ -18,6 +18,14 @@ PAGE 120 CURRENCY NO HIDE WHEN CURRENCY NO APPROVED
 
 Countinue working in Dashboard page no 318
 
+PAGE NO 35 & 323 VALUE PASS THROUGH CURSOR
+
+
+
+
+
+
+
 javascript:$s('P79_BOOKING_ID','#BOOKING_ID#');javascript:$s('P79_ARREAR','ARREAR NOTICE # 1');
 ==============================================
  Select CURRENCY_NO
