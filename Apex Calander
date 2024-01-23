@@ -1,0 +1,31 @@
+select        
+        TASK_NO,
+        LEAD_ID,
+        case when STAGES ='QUALIFIED' then '<span style="background-color:#A75C5C;">'||FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES||'</span>'
+        --'<i class="fa fa-smile-o" style="font-size:20px;color:RED"></i>'
+        when STAGES ='CONNECTED' then '<span style="background-color:#8CB7E2">'||FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES||'</span>'
+        when STAGES ='PROPOSAL MADE' then '<span style="background-color:#EB3737">'||FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES||'</span>'
+        when STAGES ='IN-PROGRESS' then '<span style="background-color:yellow">'||FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES||'</span>'
+        when STAGES ='LOST' then '<span style="background-color:#BE272E">'||FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES||'</span>'
+        when STAGES ='WON' then '<span style="background-color:#27BE40">'||FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES||'</span>'
+
+ else  FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES
+        
+       -- else FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES #BE272E
+        end
+                                  as user_name,
+         (SELECT TASK_DETAIL FROM CRM_USER_TASKS WHERE  TASK_ID =   TASK_NO)         TASK_DETAIL,                
+           
+           STAGES,
+           CRM_SETUP_MAST.CREATED_ON                                            CREATED_ON,
+           CRM_SETUP_MAST.UPDATED_ON,   
+           SOURCES                                            as SOURCES,
+           '<i class="fa fa-phone" aria-hidden="true"></i> ' ||CONTACT_NO                   as CONTACT_NO,
+          '<i class="fa fa-envelope"></i> '||   EMAIL                     as EMAIL,
+            RESUME_DATE
+          
+         
+  from CRM_SETUP_MAST 
+  WHERE 
+   NEXT_MEETINGS IN 'PENDING' AND BUSINESS_TYPE = :P_SITE_ID
+   AND (ASSIGNED_TO = :APP_USER OR :APP_USER IN ('MAJID','M.FARHAN','KHURRAM.KHAN','KH.AZHAR.SB','WAJEEH', 'HASHAAM','SHEHZAD','SHAHBAZ'))
