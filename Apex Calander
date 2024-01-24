@@ -9,7 +9,7 @@ select
         when STAGES ='LOST' then '<span style="background-color:#BE272E">'||FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES||'</span>'
         when STAGES ='WON' then '<span style="background-color:#27BE40">'||FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES||'</span>'
 
- else  FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES
+ else  FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES  
         
        -- else FULL__NAME  ||' - '  ||CONTACT_NO  ||'</br>'||STAGES #BE272E
         end
