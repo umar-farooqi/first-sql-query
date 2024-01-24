@@ -23,6 +23,68 @@ select
            '<i class="fa fa-phone" aria-hidden="true"></i> ' ||CONTACT_NO                   as CONTACT_NO,
           '<i class="fa fa-envelope"></i> '||   EMAIL                     as EMAIL,
             RESUME_DATE
+
+
+
+
+
+
+
+
+
+create or replace TRIGGER DGMS.T_CRM_SETUP_MAST_HISTORY
+   AFTER DELETE OR INSERT OR UPDATE
+   ON DGMS.CRM_SETUP_MAST
+   REFERENCING NEW AS NEW OLD AS OLD
+   FOR EACH ROW
+BEGIN
+   IF INSERTING OR UPDATING
+   THEN
+         INSERT INTO CRM_SETUP_LOG (
+                LEAD_ID  ,
+                TABLE_NAMES  ,
+                CREATED_ON    ,
+                SOURCES   ,
+                ASSIGNED_TO       ,
+                TASK_NO           ,
+                REMARKS           ,
+                STAGES            ,
+                TRANSFER_REASONS  ,
+                ASSIGNED_BY       ,
+                BUSINESS_TYPE     ,
+                RESUME_DATE     ,
+                ACTIVE            ,
+                NEXT_MEETINGS     ,
+                CREATED_BY,
+                UPDATED_ON,
+                WRONG,
+                UPDATED_BY ,
+                DEALER_ID         )
+        VALUES   
+                    (
+                :OLD.LEAD_ID  ,
+                'CRM_SETUP_MAST' ,
+                :OLD.CREATED_ON    ,
+                :OLD.SOURCES   ,
+                :OLD.ASSIGNED_TO,
+                :OLD.TASK_NO,
+                :OLD.REMARKS,
+                :OLD.STAGES ,
+                :OLD.TRANSFER_REASONS  ,
+                :OLD.ASSIGNED_BY       ,
+                :OLD.BUSINESS_TYPE     ,
+                :OLD.RESUME_DATE     ,
+                :OLD.ACTIVE            ,
+                :OLD.NEXT_MEETINGS     ,
+                :OLD.CREATED_BY,
+                :OLD.UPDATED_ON,
+                :OLD.WRONG,
+                :OLD.UPDATED_BY ,
+                :OLD.DEALER_ID  );
+    
+   END IF;
+ 
+END;
           
          
   from CRM_SETUP_MAST 
