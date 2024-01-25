@@ -15,6 +15,71 @@ END IF;
 END;
 
 ye query hm ne button ko hide karwany ke liye lagai ha different users sy 
+===============================================================================
+ye query is liye lagai ha ke hm ko sary users ka data show ho 
+
+
+SELECT
+    
+    CRM.LEAD_ID,
+    CRM.CONTACT_NO,
+    
+  	
+   CRM.ASSIGNED_TO||' - '|| CASE WHEN ACTIVE='N' THEN  CRM.TASK_TITLE ||' -  '|| 'PENDING' || ' - '||CRM.RESUME_DATE||' '||CRM.STAGES
+    else CRM.RESUME_DATE||' - '||CRM.TASK_TITLE || ' - ' ||CRM.STATUS|| ' - '||CRM.RESUME_DATE||' '||CRM.STAGES end   ACTIVE,
+    
+   CASE WHEN STATUS = 'IN-PROCESS' THEN 'apex-cal-gray'
+   when STATUS = 'COMPLETED' THEN 'apex-cal-yellow'
+   when STATUS = 'PENDING' THEN 'apex-cal-orange'
+   end as css_class,
+
+
+
+    CRM. STATUS,
+     
+    CRM.REMARKS,
+    CRM.EMAIL,
+    CRM.CITY,
+    CRM.CREATED_ON,
+    CRM.SOURCES,
+    CRM.ASSIGNED_TO,
+    CRM.TASK_NO,
+  
+    
+    CRM.TRANSFER_REASONS,
+    CRM.ASSIGNED_BY,
+    CRM.BUSINESS_TYPE,
+    
+    CRM.SEEN_TYPE,
+  
+    CRM.LEAD_TIME,
+    CRM.JOB_TITLE,
+    CRM.COUNTRY,
+    CRM.SOURCE_TYPE,
+    CRM.NEXT_MEETINGS,
+    CRM.CREATED_BY,
+    CRM.OTHER_CITY,
+    CRM.UPDATED_ON,
+    CRM.DEALER_NAME,
+    CRM.DEALER_NUMBER,
+    
+    CRM.UPDATED_BY,
+    CRM.DEALER_ID,
+    
+    CRM.SITE_ID
+  
+FROM CRM_SETUP_MAST CRM 
+
+WHERE
+  (NVL(CRM.ASSIGNED_TO, CRM.CREATED_BY) IN 
+    (CASE 
+      WHEN :P_USER_ID <> 'UMAR.FAROOQ' THEN :P_USER_ID 
+      ELSE NVL(CRM.ASSIGNED_TO, CRM.CREATED_BY) 
+    END))
+ AND CRM.ASSIGNED_TO = NVL(:P56_USER,CRM.ASSIGNED_TO)                     
+
+AND CRM.CRM_TASK IS NOT NULL
+===========================================================================
 
 
 
