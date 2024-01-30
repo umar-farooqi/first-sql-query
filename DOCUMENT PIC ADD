@@ -43,3 +43,104 @@ IF :P20_DOCUMENT IS NOT NULL THEN
     COMMIT;
 END IF; 
 END;
+===============================================================================
+
+DECLARE
+    v_Id  Number;
+    v_count number;
+    V_BK_COUNT NUMBER;
+    V_CL_REG_NO VARCHAR2(500);
+    V_CL_IDS VARCHAR2(200);
+    v_doc_img blob;
+    v_doc_file_nm varchar2(300);
+    v_doc_mime_typ varchar2(300);
+BEGIN
+    If apex_application.g_f01.count <> 0 then
+           
+
+        For i in 1..apex_application.g_f01.count loop
+           v_Id :=TO_NUMBER(nvl(apex_application.g_f01(i),0));
+           v_count := apex_application.g_f01.count;
+           DECLARE
+                CURSOR C1 IS
+                    SELECT * FROM DGMS_DEALERS_FORMS WHERE ID  = v_Id;
+            BEGIN
+                FOR I IN C1 LOOP
+                SELECT COUNT(*) INTO V_BK_COUNT 
+                FROM DGMS_PLOTS_BOOKING WHERE ORG_ID = :P_ORG_ID AND BOOKING_STATUS = 'BOOKED'
+                AND PLOT_ID = I.FILE_ID;
+                IF V_BK_COUNT > 0 THEN
+                SELECT CLIENT_REG_NO,CLIENT_IDS INTO V_CL_REG_NO,V_CL_IDS 
+                FROM DGMS_PLOTS_BOOKING WHERE ORG_ID = :P_ORG_ID AND BOOKING_STATUS = 'BOOKED'
+                AND PLOT_ID = I.FILE_ID;
+                END IF;
+                                INSERT INTO DGMS_TRANSFERRED_PLOT (
+                                    CLIENT_ID,
+                                    CLIENT_IDS,
+                                    DEALER_ID,
+                                    FROM_DEALER,
+                                    PLOT_ID,
+                                    STATUS,
+                                    PLAN,
+                                    SCHEDULE_PAYMENT,
+                                    PAYMENT_PLAN,
+                                    POLICY_DECISION,
+                                    POLICY_NO,
+                                    PLAN_ID,
+                                    EXTRA_CHARGES,
+                                    COMMUNITY_CHARGES,
+                                    TRANSFER_FEE
+                                    )
+                                VALUES (
+                                    V_CL_REG_NO,
+                                    V_CL_IDS,
+                                    :P124_CNIC,
+                                    :P124_FROM_DEALER,
+                                     I.FILE_ID,
+                                    'POST',
+                                    :P124_PLAN,
+                                    :P124_SCHEDULE_PAYMENT,
+                                    :P124_PAYMENT_PLAN,
+                                    :P124_POLICY_DECISION,
+                                    :P124_POLICY_NO,
+                                    :P124_PLAN_NAME,
+                                    :P124_EXTRA_CHARGES,
+                                    :P124_COMMUNITY_CHARGES,
+                                    :P124_PER_MARLA_TRANSFER_FEE
+                                );
+                    COMMIT;
+IF NVL(:P124_DOC_1,:P124_DOC) IS NOT NULL THEN
+    SELECT
+        blob_content,FILENAME,MIME_TYPE
+    INTO
+        v_doc_img,v_doc_file_nm,v_doc_mime_typ
+    FROM
+        apex_application_temp_files
+    WHERE
+        name = NVL(:P124_DOC_1,:P124_DOC);
+
+    INSERT INTO DGMS_BOOKING_DOCUMENTS( PLOT_ID, DOCUMENT_TYPE, DOCUMENT, DOC_FILE_NAME, DOC_MIME_TYPE) 
+    VALUES(I.FILE_ID,'DEALER TO DEALER', v_doc_img, v_doc_file_nm, v_doc_mime_typ);
+    COMMIT;
+END IF; 
+                END LOOP;
+            END;
+    END LOOP;
+    END IF;
+    
+END;
+DATA INSERT INTO OTHER TABLE AND FILE ATTACHMENT .
+===================
+
+
+
+
+
+
+
+
+
+
+
+
+                          
