@@ -12,3 +12,7 @@ JOIN DGMS_PLOTS_BOOKING DPB ON DPB.PLOT_ID = DPD.ID AND BOOKING_STATUS = 'BOOKED
 WHERE --DPD.ORG_ID = :P_ORG_ID 
 DPD.ORG_ID =:P173_ORGANIZATION
 and (DPD.PLOT_TYPE != 'FILE' OR DPD.PLOT_TYPE IS NULL);
+
+
+==============================
+javascript:$s('P172_METER_ID','#ID#');openModal('METER');apex.region('METER').refresh();
