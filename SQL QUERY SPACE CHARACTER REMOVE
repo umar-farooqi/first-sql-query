@@ -1,0 +1,3 @@
+SELECT regexp_substr(p_client_ids,'[^:]+', 1, level) FROM DUAL 
+                    connect BY regexp_substr(p_client_ids, '[^:]+', 1, level) is not null)
+                    ORDER BY ID;
