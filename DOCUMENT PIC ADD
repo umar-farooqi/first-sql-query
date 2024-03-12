@@ -7,7 +7,7 @@ IF :P101_DOCUMENT IS NOT NULL THEN
     SELECT
         blob_content,FILENAME,MIME_TYPE
     INTO
-        v_doc_img,v_doc_file_nm,v_doc_mime_typ
+        v_doc_img,v_doc_file_nm,v_doc_mime_typ 
     FROM
         apex_application_temp_files
     WHERE
