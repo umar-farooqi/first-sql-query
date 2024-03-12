@@ -3,7 +3,7 @@ v_doc_img blob;
 v_doc_file_nm varchar2(300);
 v_doc_mime_typ varchar2(300);
 BEGIN
-IF :P101_DOCUMENT IS NOT NULL THEN
+IF :P101_DOCUMENT IS NOT NULL THEN 
     SELECT
         blob_content,FILENAME,MIME_TYPE
     INTO
