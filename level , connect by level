@@ -2,3 +2,21 @@
 select level  
 from dual
 connect by level <= 20
+================================================.
+
+
+SELECT TRUNC(SYSDATE, 'MM') + LEVEL - 1 AS day
+FROM dual
+CONNECT BY TRUNC(TRUNC(SYSDATE, 'MM') + LEVEL - 1, 'MM') <= TRUNC(SYSDATE, 'MM');
+
+SELECT TRUNC(SYSDATE, 'MM') + LEVEL - 1 AS day
+FROM dual
+CONNECT BY TRUNC(SYSDATE, 'MM') + LEVEL - 1 <= TRUNC(SYSDATE);
+==========================================================
+just current month show
+
+SELECT 
+       trim(to_char(add_months(sysdate,level-1),'MONTH'))||'-'||to_char(add_months(sysdate,level-1),'RRRR') AS R,
+       trim(to_char(add_months(sysdate,level-1),'MONTH'))||'-'||to_char(add_months(sysdate,level-1),'RRRR') AS D
+FROM DUAL
+CONNECT BY LEVEL <= 1;
