@@ -1,0 +1,27 @@
+DECLARE
+V_REM_ID NUMBER;
+v_doc_img blob;
+v_doc_file_nm varchar2(300);
+v_doc_mime_typ varchar2(300);
+BEGIN
+
+    INSERT INTO DGMS_CLIENT_REMARKS(BOOKING_ID,ARREAR_DATE,REMARKS_TYPE)
+    VALUES (:P79_BOOKING_ID,:P79_ARREAR_DATE,:P79_ARREAR);
+    COMMIT;
+    SELECT MAX(ID) INTO V_REM_ID FROM DGMS_CLIENT_REMARKS;
+
+IF :P79_DOCUMENT IS NOT NULL THEN
+    SELECT
+        blob_content,FILENAME,MIME_TYPE
+    INTO
+        v_doc_img,v_doc_file_nm,v_doc_mime_typ
+    FROM
+        apex_application_temp_files
+    WHERE
+        name = :P79_DOCUMENT;
+
+    INSERT INTO DGMS_BOOKING_DOCUMENTS(BOOKING_ID,DOCUMENT_TYPE,REMARKS,DOCUMENT,DOC_FILE_NAME,DOC_MIME_TYPE) 
+    VALUES(V_REM_ID,:P79_ARREAR,:P79_ARREAR_REMARKS, v_doc_img,v_doc_file_nm,v_doc_mime_typ);
+    COMMIT;
+END IF; 
+END;    
