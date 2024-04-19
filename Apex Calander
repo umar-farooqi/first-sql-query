@@ -151,4 +151,4 @@ END;
    AND (ASSIGNED_TO = :APP_USER OR :APP_USER IN ('MAJID','M.FARHAN','KHURRAM.KHAN','KH.AZHAR.SB','WAJEEH', 'HASHAAM','SHEHZAD','SHAHBAZ'))
 
 
-https://housing.faisalmovers.co:85/ords/f?p=10032:242:15256244376554:::::
+https://housing.faisalmovers.co:85/ords/f?p=10032:242:15256244376554::::: 
