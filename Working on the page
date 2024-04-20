@@ -33,21 +33,14 @@ javascript:$s('P79_BOOKING_ID','#BOOKING_ID#');javascript:$s('P79_ARREAR','ARREA
  WHERE STATUS = 'AVAILABLE'
 AND CURRENCY_TYPE=:P120_CURRENCY_TYPE
 AND CURRENCY_NO NOT IN (SELECT CURRENCY_NO FROM DGMS_PLOT_DETAILS DPD WHERE  DPD.CURRENCY_NO=DCD.CURRENCY_NO )
+=====================================================
 
+ select APPROVAL_STATUS from DGMS_VOUCHERS_APPROVAL
+  where approval_status = 'TAX APPROVED'
+  and org_id = :P_ORG_ID
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+backup query working in home page
+================================================
 
 http://110.39.163.138:8080/ords/f?p=4500:1003:3823942123428:::::
 
