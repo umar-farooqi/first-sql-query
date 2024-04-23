@@ -1,0 +1,5 @@
+CASE 
+        WHEN sysdate > CREATED_ON + 30 THEN TO_CHAR(TRUNC(MONTHS_BETWEEN(sysdate, CREATED_ON))) || ' - Month' 
+        WHEN sysdate < CREATED_ON + 30 THEN TO_CHAR(TRUNC(sysdate - CREATED_ON)) || ' - Day' 
+        ELSE '0' 
+    END AS Time_frame , 
