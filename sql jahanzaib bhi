@@ -27,3 +27,15 @@ FROM
 
      GROUP BY  
          DPB.ID) SUBQUERY;
+
+
+=================================
+Bilal query
+
+SELECT 'Item Equal to 100' AS display_value,
+       100 AS return_value
+FROM dual
+UNION ALL
+SELECT 'Item Less than 100' AS display_value,
+       99 AS return_value
+FROM dual;
