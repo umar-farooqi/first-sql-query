@@ -157,6 +157,67 @@ END;
  sys.dbms_lob.getlength(DOCUMENT) DOCUMENT,
 
 
+=========================================================================
+
+
+declare
+    v_doc_img blob;
+    v_doc_file_nm varchar2(300);
+    v_doc_mime_typ varchar2(300);
+begin
+insert into DGMS_CLIENT_FILE_RETURN
+        (
+            BOOKING_ID
+            ,PLOT_ID
+            ,FTYPE
+            ,TTYPE
+            ,STATUS
+            ,APPROVAL_STATUS
+            ,TEMP_CANC_TYPE
+        )
+values
+        (
+            :P396_BOOKING_ID
+            ,:P396_PLOT_ID
+            ,'TEMPORARY CANCELLED'
+            ,'FILE RECEIVING'
+            ,'ACTIVE'
+            ,'PENDING'
+            ,:P396_TEMP_CANC_TYPE
+        );
+        commit;
+
+    SELECT
+        blob_content,FILENAME,MIME_TYPE
+    INTO
+        v_doc_img,v_doc_file_nm,v_doc_mime_typ
+    FROM
+        apex_application_temp_files
+    WHERE
+        name = :P396_DOC;
+
+    INSERT INTO DGMS_BOOKING_DOCUMENTS
+        (
+            BOOKING_ID
+            ,PLOT_ID
+            ,"DOCUMENT"
+            ,DOC_FILE_NAME
+            ,DOC_MIME_TYPE
+            ,DOCUMENT_TYPE
+            )
+    VALUES 
+        (   
+            :P396_BOOKING_ID
+            ,:P396_PLOT_ID
+            ,v_doc_img
+            ,v_doc_file_nm
+            ,v_doc_mime_typ
+            ,'FILE RETURN DOC'
+            );
+        commit;
+end;
+
+
 
 
 
