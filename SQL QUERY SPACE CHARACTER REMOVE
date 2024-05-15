@@ -1,3 +1,7 @@
 SELECT regexp_substr(p_client_ids,'[^:]+', 1, level) FROM DUAL 
                     connect BY regexp_substr(p_client_ids, '[^:]+', 1, level) is not null)
                     ORDER BY ID;
+=====================================================
+
+(SELECT regexp_substr(nvl(:P175_METER_REF_NOO,0),'[^:]+', 1, LEVEL) FROM DUAL 
+                    connect BY regexp_substr(nvl(:P175_METER_REF_NOO,0), '[^:]+', 1, LEVEL) is not null);
