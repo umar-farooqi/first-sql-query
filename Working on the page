@@ -46,5 +46,10 @@ http://110.39.163.138:8080/ords/f?p=4500:1003:3823942123428:::::
 
 
 
+javascript:window.open("f?p=&APP_ID.:0:&SESSION.:PRINT_REPORT=COMMUNITY_T","blank");
+javascript:window.open("f?p=&APP_ID.:0:&SESSION.:PRINT_REPORT=COMMUNITY_T","blank");
+
+
+
 
  
