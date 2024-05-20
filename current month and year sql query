@@ -1,0 +1,5 @@
+SELECT 
+       trim(to_char(add_months(sysdate,level-1),'MONTH'))||'-'||to_char(add_months(sysdate,level-1),'RRRR') AS R,
+       trim(to_char(add_months(sysdate,level-1),'MONTH'))||'-'||to_char(add_months(sysdate,level-1),'RRRR') AS D
+FROM DUAL
+CONNECT BY LEVEL <= 1;
