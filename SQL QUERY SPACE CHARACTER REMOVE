@@ -5,3 +5,10 @@ SELECT regexp_substr(p_client_ids,'[^:]+', 1, level) FROM DUAL
 
 (SELECT regexp_substr(nvl(:P175_METER_REF_NOO,0),'[^:]+', 1, LEVEL) FROM DUAL 
                     connect BY regexp_substr(nvl(:P175_METER_REF_NOO,0), '[^:]+', 1, LEVEL) is not null);
+=======================================
+ , remove
+
+
+ (select regexp_substr(:P93_CATEGORY,'[^,]+', 1, level)  from DUAL
+               connect by regexp_substr(:P93_CATEGORY, '[^,]+', 1, level) is NOT null)
+order by DPD.plot_no asc
