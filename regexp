@@ -1,0 +1,3 @@
+ (select regexp_substr(:P93_CATEGORY,'[^,]+', 1, level)  from DUAL
+               connect by regexp_substr(:P93_CATEGORY, '[^,]+', 1, level) is NOT null)
+order by DPD.plot_no asc
