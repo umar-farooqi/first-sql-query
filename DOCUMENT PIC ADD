@@ -216,6 +216,40 @@ values
             );
         commit;
 end;
+==================================================================================
+=================================================================================
+DOCUMENT PIC ADD WITH LOOP AND MULTIPLE PIC ADD 
+DECLARE
+    l_file_names apex_t_varchar2;
+    l_file  apex_application_temp_files%rowtype;
+    V_FARD NUMBER;
+
+BEGIN
+
+         l_file_names := apex_string.split (
+                        p_str => :P117_DOCUMENT,
+                        p_sep => ':' );
+    
+    FOR i IN 1 .. l_file_names.count LOOP
+        SELECT *
+        INTO l_file
+        FROM apex_application_temp_files
+        WHERE name = l_file_names(i) AND APPLICATION_ID = :APP_ID;
+
+        INSERT INTO DGMS_BOOKING_DOCUMENTS
+              (DOCUMENT, DOC_MIME_TYPE, DOC_FILE_NAME,REBATE_POLICY_ID,DOCUMENT_TYPE,INCENTIVE_POLICY_ID)
+        VALUES 
+              ( l_file.BLOB_CONTENT, 
+                l_file.MIME_TYPE, 
+                l_file.FILENAME,
+                :P117_INCENTIVE_POLIICY,
+                'REBATE POLICY',
+                :P117_ID);
+            
+        COMMIT;
+    END LOOP;
+END;
+      
 
 
 
