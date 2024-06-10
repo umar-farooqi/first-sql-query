@@ -4,13 +4,12 @@ SELECT   SUM(RECEIVED_AMT) OVER (PARTITION BY DIWR.INST_ID /*ORDER BY DIWR.ID*/ 
  where inst_id = 2
 =======================================================================
 
-
-
-
-
-
-
-
+SELECT new_id,
+       ROW_NUMBER() OVER( ORDER BY new_id) AS "ROW_NUMBER",
+       RANK()       OVER( ORDER BY new_id) AS "RANK",
+       DENSE_RANK() OVER( ORDER BY new_id) AS "DENSE_RANK",
+       PERCENT_RANK() OVER( ORDER BY new_id) AS "PERCENT_RANK"
+FROM test_data
 
 new_id	ROW_NUMBER	RANK	DENSE_RANK	PERCENT_RANK
 100	       1	     1          1	        0
