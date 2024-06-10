@@ -11,7 +11,7 @@ SELECT new_id,
        PERCENT_RANK() OVER( ORDER BY new_id) AS "PERCENT_RANK"
 FROM test_data
 
-new_id	ROW_NUMBER	RANK	DENSE_RANK	PERCENT_RANK
+new_id	ROW_NUMBER RANK	DENSE_RANK	PERCENT_RANK
 100	       1	     1          1	        0
 200	       2	     2          2	        0.166
 200	       3	     2          2	        0.166
