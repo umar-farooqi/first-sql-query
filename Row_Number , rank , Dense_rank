@@ -2,3 +2,21 @@ SELECT   SUM(RECEIVED_AMT) OVER (PARTITION BY DIWR.INST_ID /*ORDER BY DIWR.ID*/ 
  
  from DGMS_INSTALLMENT_WISE_RECEIPTS DIWR
  where inst_id = 2
+=======================================================================
+
+
+
+
+
+
+
+
+
+new_id	ROW_NUMBER	RANK	DENSE_RANK	PERCENT_RANK
+100	       1	     1          1	        0
+200	       2	     2          2	        0.166
+200	       3	     2          2	        0.166
+300	       4	     4          3	        0.5
+500	       5	     5          4	        0.666
+500	       6	     5          4	        0.666
+700	       7	     7          5	        1
