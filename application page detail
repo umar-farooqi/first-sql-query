@@ -1,0 +1,12 @@
+SELECT
+    PAGE_NAME AS "Name",
+    PAGE_ID AS "Page",
+    'Select' AS "Select Page"
+FROM
+    APEX_APPLICATION_PAGES
+WHERE
+    APPLICATION_ID = 100
+   AND PAGE_ID BETWEEN 1 AND 998
+ORDER BY
+    PAGE_ID
+    
