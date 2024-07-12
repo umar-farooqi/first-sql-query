@@ -1,3 +1,5 @@
+JUST PAGE ITEM NAME AND NUMBER SHOW 
+
 SELECT
     PAGE_NAME AS "Name",
     PAGE_ID AS "Page",
@@ -9,4 +11,30 @@ WHERE
    AND PAGE_ID BETWEEN 1 AND 998
 ORDER BY
     PAGE_ID
+
+
+===================================================
+PAGE ITEM NAME AND NUMBER SHOW WITH PARENTS 
+
+SELECT
+    p.PAGE_NAME AS "Name",
+    p.PAGE_ID AS "Page",
+    'Select' AS "Select Page",
+    SUBSTR(nav.ENTRY_TARGET,
+           INSTR(nav.ENTRY_TARGET, ':') + 1,
+           INSTR(nav.ENTRY_TARGET, ':', 1, 2) - INSTR(nav.ENTRY_TARGET, ':') - 1) AS "Parent Page",
+    nav.PARENT_ENTRY_TEXT AS "Parent Pages"
+FROM
+    APEX_APPLICATION_PAGES p
+    LEFT JOIN apex_application_list_entries nav ON 
+        SUBSTR(nav.ENTRY_TARGET,
+               INSTR(nav.ENTRY_TARGET, ':') + 1,
+               INSTR(nav.ENTRY_TARGET, ':', 1, 2) - INSTR(nav.ENTRY_TARGET, ':') - 1) = TO_CHAR(p.PAGE_ID)
+        AND nav.APPLICATION_ID = p.APPLICATION_ID
+WHERE
+    p.APPLICATION_ID = 102
+    AND p. PAGE_ID BETWEEN 1 AND 998
+ORDER BY
+    p.PAGE_ID;
+
     
