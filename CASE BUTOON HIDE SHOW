@@ -1,4 +1,4 @@
-select 
+select
     DPB.ID BOOKING_NO,
     DPD.PLOT_NO PLOT_NO,
     INITCAP(DPB.CLIENT_REG_NO) CLIENT,
