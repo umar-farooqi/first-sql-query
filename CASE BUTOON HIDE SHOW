@@ -13,7 +13,7 @@ select
     DPCR.id cancel_no,
     'PRINT' "PRINT",
    -- 'Cancel Request' CANCEL_REQUEST
-   case when DPCR.ID is null then 
+   case when DPCR.ID is null then
         'Cancelled' 
         ELSE
        NULL 
