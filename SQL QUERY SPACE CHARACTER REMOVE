@@ -12,3 +12,9 @@ SELECT regexp_substr(p_client_ids,'[^:]+', 1, level) FROM DUAL
  (select regexp_substr(:P93_CATEGORY,'[^,]+', 1, level)  from DUAL
                connect by regexp_substr(:P93_CATEGORY, '[^,]+', 1, level) is NOT null)
 order by DPD.plot_no asc
+===========================================
+new
+
+  where name in (SELECT regexp_substr(nvl(:P57_NAME,0),'[^:]+', 1, LEVEL) FROM DUAL 
+                    connect BY regexp_substr(nvl(:P57_NAME,0), '[^:]+', 1, LEVEL) is not null) 
+  or :P57_NAME is null
