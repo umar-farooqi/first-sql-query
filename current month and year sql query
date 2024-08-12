@@ -1,3 +1,4 @@
+get mont and year show in pop love 
 SELECT 
        trim(to_char(add_months(sysdate,level-1),'MONTH'))||'-'||to_char(add_months(sysdate,level-1),'RRRR') AS R,
        trim(to_char(add_months(sysdate,level-1),'MONTH'))||'-'||to_char(add_months(sysdate,level-1),'RRRR') AS D
