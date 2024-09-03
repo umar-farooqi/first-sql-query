@@ -1,4 +1,4 @@
- sys.dbms_lob.getlength(DBD.DOCUMENT) DOCUMENT ====       
+ sys.dbms_lob.getlength(DBD.DOCUMENT) DOCUMENT ====
 
 DECLARE
 v_doc_img blob;
