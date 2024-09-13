@@ -1,0 +1,57 @@
+DECLARE
+    l_html CLOB;
+    l_product_count INTEGER := 0;
+    l_max_products CONSTANT INTEGER := 20; -- Adjust this value as needed
+    
+    PROCEDURE html(p_html IN VARCHAR2) IS
+    BEGIN
+        DBMS_LOB.WRITEAPPEND(l_html, LENGTH(p_html), p_html);
+    END html;
+
+BEGIN
+    DBMS_LOB.CREATETEMPORARY(l_html, TRUE);
+    
+    html('<div id="product_container" class="p-4">');
+    html('<div id="products" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">');
+    
+    FOR rec IN (
+        SELECT
+            NAME,
+            DESCRIPTION,
+            PRICE,
+            STOCK_QUANTITY,
+            IMAGE
+        FROM products
+    ) LOOP
+        EXIT 
+        WHEN l_product_count >= l_max_products;
+        l_product_count := l_product_count + 1;
+        
+        html('
+        <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <img src="data:image/jpeg;base64,');
+        
+        -- Process BLOB in chunks
+        IF rec.IMAGE IS NOT NULL THEN
+            FOR i IN 0 .. TRUNC((DBMS_LOB.GETLENGTH(rec.IMAGE) - 1) / 6000) LOOP
+                html(UTL_RAW.CAST_TO_VARCHAR2(UTL_ENCODE.BASE64_ENCODE(DBMS_LOB.SUBSTR(rec.IMAGE, 6000, i * 6000 + 1))));
+            END LOOP;
+        END IF;
+        
+        html('" alt="' || rec.NAME || '" class="w-full h-48 object-cover">
+            <div class="p-4">
+                <h3 class="text-lg font-semibold mb-2">' || rec.NAME || '</h3>
+                <p class="text-gray-700 text-sm mb-4">' || SUBSTR(rec.DESCRIPTION, 1, 100) || '...</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-900 font-bold">$' || TO_CHAR(rec.PRICE, 'FM999990.00') || '</span>
+                    <span class="text-gray-600 text-sm">Stock: ' || TO_CHAR(rec.STOCK_QUANTITY) || '</span>
+                </div>
+                <button type="button"  class="mt-4 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition duration-200">Add to Cart</button>
+            </div>
+        </div>');
+    END LOOP;
+    
+
+    
+    RETURN l_html;
+END;
