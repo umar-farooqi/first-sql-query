@@ -1,0 +1,22 @@
+THIS QUERY CREATE THE PROCESS AND PUT THE QUERY IN PAGE LEVEL
+
+DECLARE
+           l_blob    BLOB;
+           V_ID      NUMBER;
+    BEGIN
+         SELECT MAX(DOC_ID) + 1 INTO V_ID FROM AB_DOCUMENT_RECORDS;
+    ------------------------------PROFILE IMAGE-----------------------------------------------
+        IF :P123_PROFILE_TYPE IS NOT NULL THEN
+            SELECT BLOB_CONTENT INTO l_blob FROM apex_application_temp_files
+            WHERE NAME = :P123_PROFILE_IMAGE;
+            blob_to_file(
+                p_blob     => l_blob,
+                p_dir      => 'AKB',
+                p_filename => V_ID||:P123_PROFILE_TYPE
+            );
+            INSERT INTO AB_DOCUMENT_RECORDS(DOC_TYPE_ID, DOC_TYPE, STATUS, DOCUMENTS_TYPE)
+                VALUES (:P123_SR_ID, 'CUSTOMER IMAGE', 'Y',:P123_PROFILE_TYPE);
+        END IF;
+    ------------------------------END-----------------------------------------------
+END;
+
