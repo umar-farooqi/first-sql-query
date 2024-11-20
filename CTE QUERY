@@ -1,4 +1,4 @@
-WITH TAX_POLICY AS (
+WITH TAX_POLICY AS ( 
     SELECT 
                     POLICY_ID,
                     FED,
