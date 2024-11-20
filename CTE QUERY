@@ -1,6 +1,6 @@
 WITH TAX_POLICY AS (
     SELECT
-                    POLICY_ID, 
+                    POLICY_ID,
                     FED,
                     GST,
                     AIT 
