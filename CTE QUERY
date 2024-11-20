@@ -1,0 +1,255 @@
+WITH TAX_POLICY AS (
+    SELECT 
+                    POLICY_ID,
+                    FED,
+                    GST,
+                    AIT 
+                FROM
+                    AB_SETUP_POLICY_REGISTERED SPR
+                WHERE
+                    STATUS = 'Y'
+                    AND ORG_ID=:GV_ORG_ID
+),
+PURCHASE_ORDER AS (
+  SELECT
+                          C.*,
+                          NVL(TOTAL_AMOUNT,0)/NVL(NO_BAGS,0) PER_BAGS
+                FROM(
+                SELECT
+                                PO_ID,
+                                DET_ID POD_ID,
+                                COMPANY_ORDER_NO,
+                                TRANSACTION_DATE,
+                                PURCHASING_TYPE,
+                                ITEM_ID,
+                                ITEM_NAME,
+                                NO_BAGS,
+                            CASE
+                                        WHEN AIT IS NULL THEN     ROUND(AFTER_GST_VALUE,0)
+                                        ELSE   ROUND(NVL(AFTER_GST_VALUE,0) * NVL(AIT,0)/100)+ROUND(NVL(AFTER_GST_VALUE,0))
+                                END TOTAL_AMOUNT
+                FROM (
+                SELECT
+                            POR.DET_ID ,
+                            POR.PO_ID,
+                            TO_CHAR(PO.TRANSACTION_DATE, 'DD-MON-YYYY') AS TRANSACTION_DATE,
+                            PO.COMPANY_ORDER_NO,
+                            PO.PURCHASING_TYPE,
+                            ITM.ITEM_ID,
+                            ITM.ITEM_NAME||' ('|| ITM.PACKING_SIZE || ' '|| ITM.UNIT || ' '|| ITM.PACKING || ')' AS ITEM_NAME,
+                            POR.CHANGE_BAGS NO_BAGS,
+                            CASE 
+                                    WHEN GST IS NULL THEN NVL(POR.NET_AMOUNT,0)+(NVL(FED,0) * NVL(POR.NET_AMOUNT, 0) / 100) 
+                                    WHEN  FED IS NULL THEN ((NVL(POR.NET_AMOUNT, 0) * NVL(GST,0) )/100)  + NVL(POR.NET_AMOUNT,0)+(NVL(FED,0) * NVL(POR.NET_AMOUNT, 0) / 100) 
+                                    ELSE ((NVL(POR.NET_AMOUNT, 0) + (FED * NVL(POR.NET_AMOUNT, 0) / 100)) * NVL(GST, 0) / 100) +  NVL(POR.NET_AMOUNT,0)+(NVL(FED,0) * NVL(POR.NET_AMOUNT, 0) / 100) 
+                            END AFTER_GST_VALUE,
+                            AIT,
+                            POR.TAX_POLICY_ID,
+                            DEAL_POLICY_ID
+                FROM 
+                                         AB_PO_DEMAND_REQ_DET DRD
+                          JOIN   AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = DRD.ITEM_ID
+                          JOIN   AB_PO_PURCHASE_ORDER_DET POR ON POR.DEMAND_DET_ID = DRD.DET_ID
+                          JOIN   AB_LOOKUP_DETAIL LD ON LD.DET_ID = ITM.PRODUCT_CATEGORY_ID
+                          JOIN   AB_PO_PURCHASE_ORDER PO ON PO.PO_ID=POR.PO_ID
+                LEFT  JOIN   TAX_POLICY TP ON TP.POLICY_ID = POR.TAX_POLICY_ID
+          WHERE
+                           POR.ORG_ID=:GV_ORG_ID
+                AND  PO.PO_TYPE='PURCHASE ORDER'
+                ORDER BY 
+                         POR.DET_ID DESC)
+)C
+),
+LOV_DATA AS (
+    SELECT
+                PO.PO_ID,
+                MAX(CASE WHEN REG.REG_TYPE = 'COMPANY' AND REG.SR_ID = PO.COMPANY_ID THEN REG.REG_NAME END) AS COMPANY_NAME,
+                MAX(CASE WHEN (REG.REG_TYPE = 'DEALER' OR REG.REG_TYPE = 'VENDOR' OR REG.REG_TYPE = 'CUSTOMER REGISTRATION') AND REG.SR_ID = PO.VENDOR_ID THEN COALESCE(REG.PARTY_NAME, REG.REG_NAME) END) AS VENDOR_NAME
+      FROM
+                    AB_PO_PURCHASE_ORDER PO
+          JOIN  AB_SETUP_REGISTRATION REG ON REG.SR_ID IN (PO.COMPANY_ID, PO.VENDOR_ID)
+     WHERE
+                    PO.ORG_ID=:GV_ORG_ID
+         AND  PO.PO_TYPE='PURCHASE ORDER'
+         GROUP BY
+                    PO.PO_ID
+),
+PURCHASE_INVOICE AS (
+    SELECT
+                   INV.IDS PO_ID,
+                   INV.PO_ID INVOICE_NO,
+                   INVD.DET_ID INVOICED_NO,
+                   INVD.IDS POD_ID,
+                   CHANGE_BAGS INV_BAGS
+            FROM
+                            AB_PO_PURCHASE_ORDER INV 
+                 JOIN  AB_PO_PURCHASE_ORDER_DET INVD ON INVD.PO_ID=INV.PO_ID
+                 JOIN  PURCHASE_ORDER PO ON PO.POD_ID=INVD.IDS
+            WHERE
+                       INV.ORG_ID=:GV_ORG_ID
+              AND INV.PO_TYPE='PURCHASE INVOICE'
+),
+TOTAL_DATA AS (
+   SELECT
+                    INV.PO_ID,
+                    INVOICE_NO,
+                    INVOICED_NO,
+                    COMPANY_ORDER_NO,
+                    TRANSACTION_DATE,
+                    PURCHASING_TYPE,
+                    COMPANY_NAME,
+                    VENDOR_NAME,
+                    ITEM_ID,
+                    ITEM_NAME,
+                    INV_BAGS,
+                    PER_BAGS,
+                    (INV_BAGS*PER_BAGS) TOTAL_AMOUNT
+    FROM
+                        PURCHASE_ORDER PO
+             JOIN  PURCHASE_INVOICE INV ON INV.POD_ID=PO.POD_ID
+    LEFT JOIN  LOV_DATA LOV ON LOV.PO_ID=PO.PO_ID
+),
+SALE_ORDER AS (
+    SELECT
+        SOD.ITEM_ID,
+        ITM.ITEM_NAME,
+        NVL(SUM(SOD.NO_BAGS), 0) AS ORDER_BAGS
+    FROM
+        AB_SO_ORDER_HEAD HEAD
+        JOIN AB_SO_ORDER_DET SOD ON SOD.SO_ID = HEAD.SO_ID
+        JOIN AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = SOD.ITEM_ID
+    WHERE
+        SOD.SOD_TYPE = 'SALE ORDER DET'
+        AND SOD.ORG_ID = :GV_ORG_ID
+    GROUP BY
+        SOD.ITEM_ID,
+        ITM.ITEM_NAME
+),
+ORDER_SHIPMENT AS (
+    SELECT
+        SOD.ITEM_ID,
+        ITM.ITEM_NAME,
+        NVL(SUM(SOD.NO_BAGS), 0) AS LIFT_BAGS
+    FROM
+        AB_SO_ORDER_HEAD HEAD
+        JOIN AB_SO_ORDER_DET SOD ON SOD.SO_ID = HEAD.SO_ID
+        JOIN AB_SO_ORDER_DET DET ON DET.SOD_IDS = SOD.SOD_ID
+        JOIN AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = SOD.ITEM_ID
+    WHERE
+        DET.SOD_TYPE = 'SO SHIPMENT DET'
+        AND SOD.ORG_ID = :GV_ORG_ID
+    GROUP BY
+        SOD.ITEM_ID,
+        ITM.ITEM_NAME
+),
+TOTAL_WITH_SALES AS (
+    SELECT
+        TD.ITEM_ID,
+        TD.ITEM_NAME,
+        NVL(SUM(GRN_BAGS), 0) AS Purchase_Grn,
+        NVL(SUM(OPENING_BAGS), 0) AS Opening_Qty,
+        NVL(SUM(GRN_BAGS), 0) + NVL(SUM(OPENING_BAGS), 0) AS Total_Available_For_Sale,
+        SO.ORDER_BAGS AS SALE_ORDER_QTY,
+        NVL(OS.LIFT_BAGS, 0) AS LIFT_BAGS,
+        NVL(SO.ORDER_BAGS, 0) - NVL(OS.LIFT_BAGS, 0) AS UNLIFT_BAGS
+    FROM (
+        SELECT
+            ITEM_ID,
+            ITEM_NAME,
+            NULL AS OPENING_BAGS,
+            NVL(GRND.RECEIVED_BAGS, 0) AS GRN_BAGS,
+            REG_NAME AS WAREHOUSE_NAME
+        FROM
+            TOTAL_DATA TD
+            JOIN AB_LOGISTICS_INFO_DET LOD ON LOD.INVOICE_NO = TD.INVOICED_NO
+            JOIN  AB_LOGISTICS_INFO LO ON LO.LO_ID=LOD.LO_ID
+                JOIN  AB_LOOKUP_DETAIL LD ON LD.DET_ID=LO.TRANSPORT_TYPE
+                JOIN   AB_LOGISTICS_INFO FRE ON FRE.LO_IDS=LO.LO_ID
+                JOIN   AB_LOGISTICS_INFO_DET  GRND ON GRND.IDS=LOD.LO_DET_ID
+                JOIN   AB_LOGISTICS_INFO GRN ON GRN.LO_IDS = FRE.LO_ID
+                AND    GRN.LO_ID=GRND.LO_ID
+                JOIN   AB_SETUP_REGISTRATION WAR ON WAR.SR_ID=GRND.WAREHOUSE_ID
+    WHERE
+                       LO.ORG_ID=:GV_ORG_ID
+            AND  LD.DET_ID=350
+           -- AND  GRND.WAREHOUSE_ID =NVL(:P147_WAREHOUSE_NAME,GRND.WAREHOUSE_ID)
+           -- AND  PO.ITEM_ID =NVL(:P147_ITEM_NAME,PO.ITEM_ID)
+        UNION ALL
+       SELECT
+              PO.ITEM_IDD ITEM_ID,
+              ITM.ITEM_NAME||' ('|| ITM.PACKING_SIZE || ' '|| ITM.UNIT || ' '|| ITM.PACKING || ')' AS ITEM_NAME, 
+           --    NVL(SUM(SOD.NO_BAGS), 0) AS QTY,
+             POD.CHANGE_BAGS OPENING_BAGS, 
+              NULL GRN_BAGS,
+              MAX(CASE WHEN ASR.REG_TYPE = 'WAREHOUSE' AND ASR.SR_ID = POD.WAREHOUSE_ID THEN ASR.REG_NAME END) AS WAREHOUSE_NAME
+   FROM 
+                  AB_PO_PURCHASE_ORDER PO
+        JOIN AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = PO.ITEM_IDD
+       --  JOIN AB_SO_ORDER_DET SOD ON SOD.ITEM_ID = ITM.ITEM_ID
+        JOIN AB_PO_PURCHASE_ORDER_DET POD  ON POD.PO_ID = PO.PO_ID
+        JOIN AB_SETUP_REGISTRATION ASR ON ASR.SR_ID IN(POD.CO_AGENCY_ID,POD.CO_VENDOR_ID,POD.WAREHOUSE_ID)
+    WHERE 
+                    PO_TYPE = 'OPENING PRODUCT'
+            AND  PO.ORG_ID = :GV_ORG_ID
+            AND   POD.WAREHOUSE_ID = NVL(:P190_WAREHOUSE,POD.WAREHOUSE_ID)       
+   GROUP BY 
+              PO.PO_ID,
+              POD.DET_ID ,
+              PO.COMPANY_ORDER_NO,
+              PO.PURCHASING_TYPE,
+              PO.ITEM_IDD ,
+              ITM.ITEM_NAME||' ('|| ITM.PACKING_SIZE || ' '|| ITM.UNIT || ' '|| ITM.PACKING || ')' , 
+              POD.CHANGE_BAGS , 
+              POD.RATE  ,
+              POD.NET_AMOUNT
+
+     UNION ALL 
+       SELECT
+              PO.ITEM_IDD ITEM_ID,
+              ITM.ITEM_NAME||' ('|| ITM.PACKING_SIZE || ' '|| ITM.UNIT || ' '|| ITM.PACKING || ')' AS ITEM_NAME, 
+          --    NVL(SUM(SOD.NO_BAGS), 0) AS QTY,
+              POD.CHANGE_BAGS OPENING_BAGS, 
+              NULL GRN_BAGS,
+              MAX(CASE WHEN ASR.REG_TYPE = 'WAREHOUSE' AND ASR.SR_ID = POD.WAREHOUSE_ID THEN ASR.REG_NAME END) AS WAREHOUSE_NAME
+   FROM 
+                  AB_PO_PURCHASE_ORDER PO
+        JOIN AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = PO.ITEM_IDD
+        -- JOIN AB_SO_ORDER_DET SOD ON SOD.ITEM_ID = ITM.ITEM_ID
+        JOIN AB_PO_PURCHASE_ORDER_DET POD  ON POD.PO_ID = PO.PO_ID
+        JOIN AB_SETUP_REGISTRATION ASR ON ASR.SR_ID IN(POD.CO_AGENCY_ID,POD.CO_VENDOR_ID,POD.WAREHOUSE_ID)
+    WHERE 
+                    PO_TYPE = 'OPENING PRODUCT'
+            AND  PO.ORG_ID = :GV_ORG_ID
+            AND   POD.WAREHOUSE_ID = NVL(:P190_WAREHOUSE,POD.WAREHOUSE_ID)       
+   GROUP BY 
+              PO.PO_ID,
+              POD.DET_ID ,
+              PO.COMPANY_ORDER_NO,
+              PO.PURCHASING_TYPE,
+              PO.ITEM_IDD ,
+              ITM.ITEM_NAME||' ('|| ITM.PACKING_SIZE || ' '|| ITM.UNIT || ' '|| ITM.PACKING || ')' , 
+              POD.CHANGE_BAGS , 
+              POD.RATE  ,
+              POD.NET_AMOUNT
+    ) TD
+    LEFT JOIN SALE_ORDER SO ON TD.ITEM_ID = SO.ITEM_ID
+    LEFT JOIN ORDER_SHIPMENT OS ON TD.ITEM_ID = OS.ITEM_ID
+    GROUP BY
+        TD.ITEM_ID,
+        TD.ITEM_NAME,
+        SO.ORDER_BAGS,
+        OS.LIFT_BAGS
+)
+SELECT
+    ITEM_ID,
+    ITEM_NAME,
+    Purchase_Grn,
+    Opening_Qty,
+    Total_Available_For_Sale,
+    SALE_ORDER_QTY,
+    LIFT_BAGS,
+    UNLIFT_BAGS
+FROM
+    TOTAL_WITH_SALES
+ORDER BY
+    ITEM_ID DESC;
