@@ -110,3 +110,637 @@ FROM
     LEFT JOIN PARTY_NAME PN ON PN.ITEM_ID = SD.ITEM_ID
 ORDER BY 
     SD.ITEM_ID ASC;
+
+============================================
+PAGE NO 251 QUERY DONE 
+WITH ORDER_BAGS AS (
+    SELECT
+        SOD.ITEM_ID,
+        ITM.ITEM_NAME,
+        NVL(SUM(SOD.NO_BAGS), 0) AS ORDER_BAGS
+    FROM
+        AB_SO_ORDER_HEAD HEAD
+        JOIN AB_SO_ORDER_DET SOD ON SOD.SO_ID = HEAD.SO_ID
+        JOIN AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = SOD.ITEM_ID
+    WHERE
+        SOD.SOD_TYPE = 'SALE ORDER DET'
+        AND SOD.ORG_ID = :GV_ORG_ID
+    GROUP BY
+        SOD.ITEM_ID,
+        ITM.ITEM_NAME
+),
+-- Order Shipment CTE
+ORDER_SHIPMENT AS (
+    SELECT
+        SOD.ITEM_ID,
+        ITM.ITEM_NAME,
+        NVL(SUM(SOD.NO_BAGS), 0) AS LIFT_BAGS
+    FROM
+        AB_SO_ORDER_HEAD HEAD
+        JOIN AB_SO_ORDER_DET SOD ON SOD.SO_ID = HEAD.SO_ID
+        JOIN AB_SO_ORDER_DET DET ON DET.SOD_IDS = SOD.SOD_ID
+        JOIN AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = SOD.ITEM_ID
+    WHERE
+        DET.SOD_TYPE = 'SO SHIPMENT DET'
+        AND SOD.ORG_ID = :GV_ORG_ID
+    GROUP BY
+        SOD.ITEM_ID,
+        ITM.ITEM_NAME
+),
+PARTY_NAME AS (
+      SELECT
+              POD.DET_ID GRND_ID,
+              PO.ITEM_IDD ITEM_ID,
+              POD.CO_TYPE PURCHASING_TYPE,
+              ITM.ITEM_NAME ITEM_NAME, 
+              ASR.PARTY_NAME--,
+             
+   FROM 
+                  AB_PO_PURCHASE_ORDER PO
+        JOIN AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = PO.ITEM_IDD
+        JOIN AB_PO_PURCHASE_ORDER_DET POD  ON POD.PO_ID = PO.PO_ID
+        JOIN AB_SETUP_REGISTRATION ASR ON ASR.SR_ID IN(POD.CO_AGENCY_ID,POD.CO_VENDOR_ID,POD.WAREHOUSE_ID)
+    WHERE 
+                    PO.PO_TYPE = 'OPENING PRODUCT'
+                  AND  ASR.REG_TYPE IN  ('VENDOR', 'DEALER')
+            AND  PO.ORG_ID = :GV_ORG_ID
+),
+-- Main Stock Query
+STOCK_DATA AS (
+    SELECT 
+        ITEM_ID,
+        ITEM_NAME,
+        SUM(OPENING_BAGS) OPENING_BAGS,
+        SUM(GRN_BAGS) GRN_BAGS,
+        SUM(AMANAT_BAGS) AMANAT_BAGS,
+        (NVL(SUM(OPENING_BAGS), 0) + NVL(SUM(GRN_BAGS), 0) + NVL(SUM(AMANAT_BAGS), 0)) AS TOTAL_AVAILABLE_STOCK,
+        SUM(PENDING_BAGS) PENDING_BAGS,
+        SUM(DUMPING_BAGS) DUMPING_BAGS,
+        SUM(TRADE_BAGS) TRADE_BAGS
+    FROM (
+        SELECT 
+            ITEM_ID, ITEM_NAME, SUM(OPENING_BAGS) OPENING_BAGS, 0 GRN_BAGS, 0 AMANAT_BAGS, 0 PENDING_BAGS, 0 DUMPING_BAGS, 0 TRADE_BAGS 
+        FROM TABLE(AB_GENERAL_PACKAGE.OPENING_STOCK(:GV_ORG_ID)) 
+        GROUP BY ITEM_ID, ITEM_NAME
+        UNION ALL
+        SELECT 
+            ITEM_ID, ITEM_NAME, 0 OPENING_BAGS, SUM(GRN_BAGS) GRN_BAGS, 0 AMANAT_BAGS, 0 PENDING_BAGS, 0 DUMPING_BAGS, 0 TRADE_BAGS 
+        FROM TABLE(AB_GENERAL_PACKAGE.GRN_STOCK(:GV_ORG_ID)) 
+        GROUP BY ITEM_ID, ITEM_NAME
+        UNION ALL
+        SELECT 
+            ITEM_ID, ITEM_NAME, 0 OPENING_BAGS, 0 GRN_BAGS, SUM(AMANAT_BAGS) AMANAT_BAGS, 0 PENDING_BAGS, 0 DUMPING_BAGS, 0 TRADE_BAGS 
+        FROM TABLE(AB_GENERAL_PACKAGE.AMANAT_STOCK(:GV_ORG_ID)) 
+        GROUP BY ITEM_ID, ITEM_NAME
+        UNION ALL
+        SELECT 
+            ITEM_ID, ITEM_NAME, 0 OPENING_BAGS, 0 GRN_BAGS, 0 AMANAT_BAGS, PENDING_BAGS, 0 DUMPING_BAGS, 0 TRADE_BAGS 
+        FROM TABLE(AB_GENERAL_PACKAGE.PENDING_PO(:GV_ORG_ID))
+        UNION ALL
+        SELECT 
+            ITEM_ID, ITEM_NAME, 0 OPENING_BAGS, 0 GRN_BAGS, 0 AMANAT_BAGS, 0 PENDING_BAGS, DUMPING_BAGS, 0 TRADE_BAGS 
+        FROM TABLE(AB_GENERAL_PACKAGE.DUMP_STOCK(:GV_ORG_ID))
+    ) 
+    GROUP BY ITEM_ID, ITEM_NAME
+)
+-- Final Query Combining Stock and Order Data
+SELECT 
+    SD.ITEM_ID,
+    SD.ITEM_NAME,
+    SD.OPENING_BAGS,
+    SD.GRN_BAGS,
+    SD.AMANAT_BAGS,
+    SD.TOTAL_AVAILABLE_STOCK,
+    SD.PENDING_BAGS,
+    SD.DUMPING_BAGS,
+    SD.TRADE_BAGS,
+    MAX(PN.PARTY_NAME) PARTY_NAME,
+    NVL(OB.ORDER_BAGS, 0) AS ORDER_BAGS,
+    NVL(OS.LIFT_BAGS, 0) AS LIFT_BAGS,
+    NVL(OB.ORDER_BAGS, 0) - NVL(OS.LIFT_BAGS, 0) AS UNLIFT_BAGS,
+    C.RECEIVED_BAGS,
+    C.FROM_WAREHOUSE,
+    C.TO_WAREHOUSE,
+    C.RECEIVED_BAGS Transfer_out,
+     NVL(OB.ORDER_BAGS, 0) +  C.RECEIVED_BAGS as Stock_Out_Total,
+    NVL(SD.TOTAL_AVAILABLE_STOCK,0) + NVL(C.RECEIVED_BAGS,0) Total_Avialable_for_Sale,
+   --NVL(Total_Avialable_for_Sale,0) - NVL(Stock_Out_Total,0) AS CLOSING_BALANCE
+   NVL(
+        NVL(SD.TOTAL_AVAILABLE_STOCK, 0) + NVL(C.RECEIVED_BAGS, 0), 
+        0
+    ) - NVL(
+        NVL(OB.ORDER_BAGS, 0) + C.RECEIVED_BAGS, 
+        0
+    ) AS CLOSING_BALANCE
+FROM 
+    STOCK_DATA SD
+    LEFT JOIN ORDER_BAGS OB ON SD.ITEM_ID = OB.ITEM_ID
+    LEFT JOIN ORDER_SHIPMENT OS ON SD.ITEM_ID = OS.ITEM_ID
+    LEFT JOIN PARTY_NAME PN ON PN.ITEM_ID = SD.ITEM_ID
+    LEFT JOIN    (WITH TAX_POLICY AS (
+                SELECT 
+                    POLICY_ID,
+                    FED,
+                    GST,
+                    AIT 
+                FROM
+                    AB_SETUP_POLICY_REGISTERED SPR
+                WHERE
+                    STATUS = 'Y'
+                    AND ORG_ID=:GV_ORG_ID
+)
+,PURCHASE_ORDER AS(
+                SELECT
+                          C.*,
+                          NVL(TOTAL_AMOUNT,0)/NVL(NO_BAGS,0) PER_BAGS
+                FROM(
+                SELECT
+                                PO_ID,
+                                DET_ID POD_ID,
+                                COMPANY_ORDER_NO,
+                                TRANSACTION_DATE,
+                                PURCHASING_TYPE,
+                                ITEM_ID,
+                                ITEM_NAME,
+                                NO_BAGS,
+                            CASE
+                                        WHEN AIT IS NULL THEN     ROUND(AFTER_GST_VALUE,0)
+                                        ELSE   ROUND(NVL(AFTER_GST_VALUE,0) * NVL(AIT,0)/100)+ROUND(NVL(AFTER_GST_VALUE,0))
+                                END TOTAL_AMOUNT
+                FROM (
+                SELECT
+                            POR.DET_ID ,
+                            POR.PO_ID,
+                            TO_CHAR(PO.TRANSACTION_DATE, 'DD-MON-YYYY') AS TRANSACTION_DATE,
+                            PO.COMPANY_ORDER_NO,
+                            PO.PURCHASING_TYPE,
+                            ITM.ITEM_ID,
+                            ITM.ITEM_NAME||' ('|| ITM.PACKING_SIZE || ' '|| ITM.UNIT || ' '|| ITM.PACKING || ')' AS ITEM_NAME,
+                            POR.CHANGE_BAGS NO_BAGS,
+                            CASE 
+                                    WHEN GST IS NULL THEN NVL(POR.NET_AMOUNT,0)+(NVL(FED,0) * NVL(POR.NET_AMOUNT, 0) / 100) 
+                                    WHEN  FED IS NULL THEN ((NVL(POR.NET_AMOUNT, 0) * NVL(GST,0) )/100)  + NVL(POR.NET_AMOUNT,0)+(NVL(FED,0) * NVL(POR.NET_AMOUNT, 0) / 100) 
+                                    ELSE ((NVL(POR.NET_AMOUNT, 0) + (FED * NVL(POR.NET_AMOUNT, 0) / 100)) * NVL(GST, 0) / 100) +  NVL(POR.NET_AMOUNT,0)+(NVL(FED,0) * NVL(POR.NET_AMOUNT, 0) / 100) 
+                            END AFTER_GST_VALUE,
+                            AIT,
+                            POR.TAX_POLICY_ID,
+                            DEAL_POLICY_ID
+                FROM 
+                                         AB_PO_DEMAND_REQ_DET DRD
+                          JOIN   AB_ITEMS_MASTER ITM ON ITM.ITEM_ID = DRD.ITEM_ID
+                          JOIN   AB_PO_PURCHASE_ORDER_DET POR ON POR.DEMAND_DET_ID = DRD.DET_ID
+                          JOIN   AB_LOOKUP_DETAIL LD ON LD.DET_ID = ITM.PRODUCT_CATEGORY_ID
+                          JOIN   AB_PO_PURCHASE_ORDER PO ON PO.PO_ID=POR.PO_ID
+                LEFT  JOIN   TAX_POLICY TP ON TP.POLICY_ID = POR.TAX_POLICY_ID
+          WHERE
+                           POR.ORG_ID=:GV_ORG_ID
+                AND  PO.PO_TYPE='PURCHASE ORDER'
+                ORDER BY 
+                         POR.DET_ID DESC)
+)C
+)
+,LOV_DATA AS(
+      SELECT
+                PO.PO_ID,
+                MAX(CASE WHEN REG.REG_TYPE = 'COMPANY' AND REG.SR_ID = PO.COMPANY_ID THEN REG.REG_NAME END) AS COMPANY_NAME,
+                MAX(CASE WHEN (REG.REG_TYPE = 'DEALER' OR REG.REG_TYPE = 'VENDOR' OR REG.REG_TYPE = 'CUSTOMER REGISTRATION') AND REG.SR_ID = PO.VENDOR_ID THEN COALESCE(REG.PARTY_NAME, REG.REG_NAME) END) AS VENDOR_NAME
+      FROM
+                    AB_PO_PURCHASE_ORDER PO
+          JOIN  AB_SETUP_REGISTRATION REG ON REG.SR_ID IN (PO.COMPANY_ID, PO.VENDOR_ID)
+     WHERE
+                    PO.ORG_ID=:GV_ORG_ID
+         AND  PO.PO_TYPE='PURCHASE ORDER'
+         GROUP BY
+                    PO.PO_ID
+)
+,PURCHASE_INOICE AS(
+            SELECT
+                   INV.IDS PO_ID,
+                   INV.PO_ID INVOICE_NO,
+                   INVD.DET_ID INVOICED_NO,
+                   INVD.IDS POD_ID,
+                   CHANGE_BAGS INV_BAGS
+            FROM
+                            AB_PO_PURCHASE_ORDER INV 
+                 JOIN  AB_PO_PURCHASE_ORDER_DET INVD ON INVD.PO_ID=INV.PO_ID
+                 JOIN  PURCHASE_ORDER PO ON PO.POD_ID=INVD.IDS
+            WHERE
+                       INV.ORG_ID=:GV_ORG_ID
+              AND INV.PO_TYPE='PURCHASE INVOICE'
+ 
+ )
+,TOTAL_DATA AS(
+    SELECT
+                    INV.PO_ID,
+                    INVOICE_NO,
+                    INVOICED_NO,
+                    COMPANY_ORDER_NO,
+                    TRANSACTION_DATE,
+                    PURCHASING_TYPE,
+                    COMPANY_NAME,
+                    VENDOR_NAME,
+                    ITEM_ID,
+                    ITEM_NAME,
+                    INV_BAGS,
+                    PER_BAGS,
+                    (INV_BAGS*PER_BAGS) TOTAL_AMOUNT
+    FROM
+                        PURCHASE_ORDER PO
+             JOIN  PURCHASE_INOICE INV ON INV.POD_ID=PO.POD_ID
+    LEFT JOIN  LOV_DATA LOV ON LOV.PO_ID=PO.PO_ID
+)
+,TRANSFER_STOCK AS(
+              SELECT
+                        TRANS.IDS,
+                        SUM(RECEIVED_BAGS) AS TRANS_BAGS
+    FROM
+                             AB_LOGISTICS_INFO_DET TRANS
+    WHERE
+                TRANS.DET_TYPE = 'STOCK TRANSFER DET'
+                AND TRANS.ORG_ID = :GV_ORG_ID
+    GROUP BY
+                TRANS.IDS
+)
+,GRN_STOCK AS(
+    SELECT
+               GRND_ID ,
+               COMPANY_ORDER_NO,
+               PURCHASING_TYPE,
+               ITEM_ID,
+               ITEM_NAME,
+               GRN_BAGS,
+               C.WAREHOUSE_NAME,
+               PER_BAGS,
+               C.DET_TYPE,
+               C.WAREHOUSE_ID,
+               VENDOR_NAME,
+               CREATED_ON,
+               CREATED_BY
+               
+    FROM(
+    SELECT
+                PO.PO_ID,
+                GRND.LO_DET_ID GRND_ID,
+                PO.COMPANY_ORDER_NO,
+                PO.PURCHASING_TYPE,
+                PO.ITEM_ID,
+                PO.ITEM_NAME,
+                NVL(GRND.RECEIVED_BAGS,0) GRN_BAGS,
+                ROUND(NVL(PO.PER_BAGS,0),2) PER_BAGS,
+                NVL(PO.PER_BAGS,0) *NVL(GRND.RECEIVED_BAGS,0) TOTAL_AMOUNT,
+                'GRN Stock' DET_TYPE ,
+                REG_NAME WAREHOUSE_NAME,
+                GRND.WAREHOUSE_ID,
+                VENDOR_NAME,
+                GRND.CREATED_ON,
+                GRND.CREATED_BY
+    FROM
+                            TOTAL_DATA PO
+                JOIN   AB_LOGISTICS_INFO_DET LOD ON LOD.INVOICE_NO=PO.INVOICED_NO 
+                JOIN   AB_LOGISTICS_INFO LO ON LO.LO_ID=LOD.LO_ID
+                JOIN   AB_LOOKUP_DETAIL LD ON LD.DET_ID=LO.TRANSPORT_TYPE
+                JOIN   AB_LOGISTICS_INFO_DET  GRND ON GRND.IDS=LOD.LO_DET_ID
+                JOIN   AB_LOGISTICS_INFO GRN ON GRN.LO_IDS = LO.LO_ID
+                AND   GRN.LO_ID=GRND.LO_ID
+                JOIN   AB_SETUP_REGISTRATION WAR ON WAR.SR_ID=GRND.WAREHOUSE_ID
+    WHERE
+                   LOD.ORG_ID=:GV_ORG_ID
+         AND  LD.DET_ID=351
+    UNION ALL
+        SELECT
+                PO.PO_ID,
+                GRND.LO_DET_ID GRND_ID,
+                PO.COMPANY_ORDER_NO,
+                PO.PURCHASING_TYPE,
+                PO.ITEM_ID,
+                PO.ITEM_NAME,
+                NVL(GRND.RECEIVED_BAGS,0) GRN_BAGS,
+                ROUND(NVL(PO.PER_BAGS,0),2) PER_BAGS,
+                NVL(PO.PER_BAGS,0) *NVL(GRND.RECEIVED_BAGS,0) TOTAL_AMOUNT,
+                'GRN Stock' DET_TYPE ,
+                REG_NAME WAREHOUSE_NAME,
+                GRND.WAREHOUSE_ID,
+                VENDOR_NAME,
+                GRND.CREATED_ON,
+                GRND.CREATED_BY
+    FROM
+                            TOTAL_DATA PO
+                JOIN   AB_LOGISTICS_INFO_DET LOD ON LOD.INVOICE_NO=PO.INVOICED_NO 
+                JOIN  AB_LOGISTICS_INFO LO ON LO.LO_ID=LOD.LO_ID
+                JOIN  AB_LOOKUP_DETAIL LD ON LD.DET_ID=LO.TRANSPORT_TYPE
+                JOIN   AB_LOGISTICS_INFO FRE ON FRE.LO_IDS=LO.LO_ID
+                JOIN   AB_LOGISTICS_INFO_DET  GRND ON GRND.IDS=LOD.LO_DET_ID
+                JOIN   AB_LOGISTICS_INFO GRN ON GRN.LO_IDS = FRE.LO_ID
+                AND    GRN.LO_ID=GRND.LO_ID
+                JOIN   AB_SETUP_REGISTRATION WAR ON WAR.SR_ID=GRND.WAREHOUSE_ID
+    WHERE
+                       LO.ORG_ID=:GV_ORG_ID
+            AND  LD.DET_ID=350
+            --AND  GRND.WAREHOUSE_ID =NVL(:P147_WAREHOUSE_NAME,GRND.WAREHOUSE_ID)
+           -- AND  PO.ITEM_ID =NVL(:P147_ITEM_NAME,PO.ITEM_ID)
+   UNION ALL
+    SELECT
+              PO.PO_ID,
+              POD.DET_ID GRND_ID,
+              TO_CHAR(POD.CO_NO) COMPANY_ORDER_NO ,
+              PO.PURCHASING_TYPE,
+              PO.ITEM_IDD ITEM_ID,
+              IM.ITEM_NAME, 
+              POD.CHANGE_BAGS OPENING_BAGS, 
+              POD.RATE PER_BAGS ,
+              POD.NET_AMOUNT,
+              'Opening Stock'DET_TYPE ,
+              MAX(CASE WHEN ASR.REG_TYPE = 'WAREHOUSE' AND ASR.SR_ID = POD.WAREHOUSE_ID THEN ASR.REG_NAME END) AS WAREHOUSE_NAME,
+              POD.WAREHOUSE_ID,
+              MAX(CASE WHEN ASR.REG_TYPE = 'VENDOR' AND ASR.SR_ID = POD.WAREHOUSE_ID THEN ASR.REG_NAME END) AS VENDOR_NAME,
+              PO.CREATED_ON,
+              PO.CREATED_BY
+   FROM 
+                  AB_PO_PURCHASE_ORDER PO
+        JOIN AB_ITEMS_MASTER IM ON IM.ITEM_ID = PO.ITEM_IDD
+        JOIN AB_PO_PURCHASE_ORDER_DET POD  ON POD.PO_ID = PO.PO_ID
+        JOIN AB_SETUP_REGISTRATION ASR ON ASR.SR_ID IN(POD.CO_AGENCY_ID,POD.CO_VENDOR_ID,POD.WAREHOUSE_ID)
+    WHERE 
+                    PO_TYPE = 'OPENING PRODUCT'
+            AND  PO.ORG_ID = :GV_ORG_ID
+         --   AND   POD.WAREHOUSE_ID = NVL(:P190_WAREHOUSE,POD.WAREHOUSE_ID)       
+   GROUP BY 
+              PO.PO_ID,
+              POD.DET_ID ,
+              PO.COMPANY_ORDER_NO,
+              PO.PURCHASING_TYPE,
+              PO.ITEM_IDD ,
+              IM.ITEM_NAME, 
+              POD.CHANGE_BAGS , 
+              POD.RATE  ,
+              POD.NET_AMOUNT,
+              POD.WAREHOUSE_ID,
+              TO_CHAR(POD.CO_NO),
+              PO.CREATED_ON,
+              PO.CREATED_BY
+    ORDER BY
+         PO_ID DESC
+ )C )
+,AGAIN_TRANSFER_STOCK AS(
+    SELECT
+               GRND_ID ,
+               COMPANY_ORDER_NO,
+               PURCHASING_TYPE,
+               ITEM_ID,
+               ITEM_NAME,
+               NVL(GRN_BAGS,0)-NVL(TRANS_BAGS,0) GRN_BAGS ,
+               PER_BAGS,
+               (PER_BAGS * NVL(GRN_BAGS,0)-NVL(TRANS_BAGS,0) ) TOTAL_AMOUNT,
+               GRN.WAREHOUSE_NAME,
+               'STOCK TRANSFER DET' DET_TYPE,
+               VENDOR_NAME,
+               CREATED_ON,
+               CREATED_BY,
+               TRANS.IDS
+   FROM
+                       GRN_STOCK GRN
+    LEFT JOIN TRANSFER_STOCK TRANS ON TRANS.IDS=GRN.GRND_ID
+    WHERE
+           NVL(GRN_BAGS,0) - NVL(TRANS_BAGS,0) <>0 
+    UNION ALL
+    SELECT
+                        TRANS.LO_DET_ID ,
+                        GRN.COMPANY_ORDER_NO,
+                        PURCHASING_TYPE,
+                        ITEM_ID,
+                        ITEM_NAME,
+                        SUM(RECEIVED_BAGS) AS TRANS_BAGS,
+                        PER_BAGS,
+                        PER_BAGS * SUM(RECEIVED_BAGS) TOTAL_AMOUNT,
+                        MAX(CASE WHEN ASR.REG_TYPE = 'WAREHOUSE' THEN ASR.REG_NAME END) AS WAREHOUSE_NAME,
+                        'STOCK TRANSFER DETT' DET_TYPE,
+                        VENDOR_NAME,
+                        TRANS.CREATED_ON,
+                        TRANS.CREATED_BY,
+                        TRANS.LO_DET_ID
+    FROM
+      
+                             AB_LOGISTICS_INFO_DET TRANS
+          LEFT JOIN  AB_SETUP_REGISTRATION ASR ON ASR.SR_ID = TRANS.WAREHOUSE_ID
+                  JOIN   GRN_STOCK GRN ON GRN.GRND_ID=TRANS.IDS
+    WHERE
+                    TRANS.DET_TYPE = 'STOCK TRANSFER DET'
+            AND TRANS.ORG_ID = :GV_ORG_ID
+    GROUP BY
+                TRANS.LO_DET_ID,
+                TRANS.IDS,
+                TRANS.WAREHOUSE_ID,
+                PURCHASING_TYPE,
+                TRANS.DET_TYPE,
+                GRND_ID,
+                GRN.COMPANY_ORDER_NO,
+                ITEM_ID,
+                ITEM_NAME,
+                PER_BAGS,
+                VENDOR_NAME,
+                TRANS.CREATED_ON,
+                TRANS.CREATED_BY
+)
+,SUM_TRANSFER_STOCK AS(
+              SELECT
+                        TRANS.IDS,
+                        SUM(RECEIVED_BAGS) AS TRANS_BAGS
+    FROM
+                             AB_LOGISTICS_INFO_DET TRANS
+    WHERE
+                TRANS.DET_TYPE = 'STOCK TRANSFER DETT'
+                AND TRANS.ORG_ID = :GV_ORG_ID
+    GROUP BY
+                TRANS.IDS
+)
+,THIRD_TIME_TRANSFER AS(
+    SELECT
+               GRND_ID ,
+               COMPANY_ORDER_NO,
+               PURCHASING_TYPE,
+               ITEM_ID,
+               ITEM_NAME,
+               NVL(GRN_BAGS,0)-NVL(TRANS_BAGS,0) GRN_BAGS,
+               PER_BAGS,
+               PER_BAGS * NVL(GRN_BAGS,0)-NVL(TRANS_BAGS,0) TOTAL_AMOUNT,
+               WAREHOUSE_NAME,
+               ATS.DET_TYPE,
+              VENDOR_NAME,
+               CREATED_ON,
+               CREATED_BY,
+               ATS.IDS
+    FROM
+                        AGAIN_TRANSFER_STOCK  ATS
+      LEFT JOIN SUM_TRANSFER_STOCK  STS ON STS.IDS=ATS.GRND_ID
+     WHERE
+            NVL(GRN_BAGS,0)-NVL(TRANS_BAGS,0) <>0
+     UNION ALL
+       SELECT
+                        TRANS.LO_DET_ID ,
+                        COMPANY_ORDER_NO,
+                        PURCHASING_TYPE,
+                        ITEM_ID,
+                        ITEM_NAME,
+                        SUM(RECEIVED_BAGS) AS TRANS_BAGS,
+                        PER_BAGS,
+                        PER_BAGS * SUM(RECEIVED_BAGS) TOTAL_AMOUNT,
+                        MAX(CASE WHEN ASR.REG_TYPE = 'WAREHOUSE' THEN ASR.REG_NAME END) AS WAREHOUSE_NAME,
+                        STS.DET_TYPE,
+                        VENDOR_NAME,
+                        TRANS.CREATED_ON,
+                        TRANS.CREATED_BY,
+                        TRANS.LO_DET_ID
+    FROM
+                             AB_LOGISTICS_INFO_DET TRANS
+          LEFT JOIN  AB_SETUP_REGISTRATION ASR ON ASR.SR_ID = TRANS.WAREHOUSE_ID
+          LEFT JOIN AGAIN_TRANSFER_STOCK  STS ON STS.GRND_ID=TRANS.IDS
+    WHERE
+                    TRANS.DET_TYPE = 'STOCK TRANSFER DETT'
+            AND TRANS.ORG_ID = :GV_ORG_ID
+    GROUP BY
+                TRANS.LO_DET_ID,
+                TRANS.IDS,
+                TRANS.WAREHOUSE_ID,
+                PURCHASING_TYPE,
+                TRANS.DET_TYPE,
+                GRND_ID,
+                COMPANY_ORDER_NO,
+                ITEM_ID,
+               ITEM_NAME,
+                STS.DET_TYPE,
+                PER_BAGS,
+                VENDOR_NAME,
+                TRANS.CREATED_ON,
+                TRANS.CREATED_BY
+ )
+  ,THIRD_TRANSFER_STOCK AS(
+              SELECT
+                        TRANS.IDS,
+                        SUM(RECEIVED_BAGS) AS TRANS_BAGS
+    FROM
+                             AB_LOGISTICS_INFO_DET TRANS
+    WHERE
+                TRANS.DET_TYPE = 'STOCK TRANSFER DETTT'
+                AND TRANS.ORG_ID = :GV_ORG_ID
+    GROUP BY
+                TRANS.IDS
+ )
+ SELECT
+               GRND_ID ,
+               COMPANY_ORDER_NO,
+               PURCHASING_TYPE,
+               ITEM_ID,
+               ITEM_NAME,
+               RECEIVED_BAGS,
+               PER_BAGS,
+               (RECEIVED_BAGS*PER_BAGS) TOTAL_AMOUNTS,
+--               TOTAL_AMOUNT,
+               WAREHOUSE_NAME FROM_WAREHOUSE,
+               MAX(CASE WHEN ASR.REG_TYPE = 'WAREHOUSE' THEN ASR.REG_NAME END) AS TO_WAREHOUSE,
+               C.DET_TYPE,
+               VENDOR_NAME,
+               TRANS.CREATED_ON,
+               TRANS.CREATED_BY,
+               TRANS.WAREHOUSE_ID,
+               TRANS.LO_DET_ID
+ FROM(
+     SELECT
+               GRND_ID ,
+               COMPANY_ORDER_NO,
+               PURCHASING_TYPE,
+               ITEM_ID,
+               ITEM_NAME,
+               NVL(GRN_BAGS,0) - NVL(TRANS_BAGS,0) GRN_BAGS,
+               PER_BAGS,
+               PER_BAGS * NVL(GRN_BAGS,0) - NVL(TRANS_BAGS,0) TOTAL_AMOUNT,
+               WAREHOUSE_NAME,
+               DET_TYPE,
+               VENDOR_NAME,
+               CREATED_ON,
+               CREATED_BY,
+               TRNS.IDS
+    FROM
+                       THIRD_TIME_TRANSFER  TRNS
+    LEFT JOIN  THIRD_TRANSFER_STOCK  TTRANS ON TTRANS.IDS=TRNS.GRND_ID
+    WHERE
+            NVL(GRN_BAGS,0)-NVL(TRANS_BAGS,0) <>0
+    UNION ALL
+     SELECT
+                        TRANS.LO_DET_ID ,
+                        COMPANY_ORDER_NO,
+                        PURCHASING_TYPE,
+                        ITEM_ID,
+                        ITEM_NAME,
+                        SUM(RECEIVED_BAGS) AS TRANS_BAGS,
+                        PER_BAGS,
+                        PER_BAGS * SUM(RECEIVED_BAGS)  TOTAL_AMOUNT,
+                        MAX(CASE WHEN ASR.REG_TYPE = 'WAREHOUSE' THEN ASR.REG_NAME END) AS WAREHOUSE_NAME,
+                        'STOCK TRANSFER DETTT' DET_TYPE,
+                        VENDOR_NAME,
+                        TRANS.CREATED_ON,
+                        TRANS.CREATED_BY,
+                        TRANS.LO_DET_ID
+    FROM
+                             AB_LOGISTICS_INFO_DET TRANS
+          LEFT JOIN  AB_SETUP_REGISTRATION ASR ON ASR.SR_ID = TRANS.WAREHOUSE_ID
+          LEFT JOIN THIRD_TIME_TRANSFER  TTRANS ON TTRANS.GRND_ID=TRANS.IDS
+    WHERE
+                    TRANS.DET_TYPE = 'STOCK TRANSFER DETTT'
+            AND TRANS.ORG_ID = :GV_ORG_ID
+    GROUP BY
+                TRANS.LO_DET_ID,
+                TRANS.IDS,
+                TRANS.WAREHOUSE_ID,
+                PURCHASING_TYPE,
+                TRANS.DET_TYPE,
+                GRND_ID,
+                COMPANY_ORDER_NO,
+                ITEM_ID,
+               ITEM_NAME,
+                TTRANS.DET_TYPE,
+                PER_BAGS,
+                VENDOR_NAME,
+                TRANS.CREATED_ON,
+                TRANS.CREATED_BY
+                )C
+        JOIN AB_LOGISTICS_INFO_DET  TRANS ON TRANS.IDS=C.GRND_ID
+         JOIN  AB_SETUP_REGISTRATION ASR ON ASR.SR_ID = TRANS.WAREHOUSE_ID
+    WHERE
+            TRUNC(TRANS.CREATED_ON) BETWEEN NVL(TO_DATE(:P308_FROM_DATE, 'DD-MON-YYYY'), TRUNC(TRANS.CREATED_ON) )  AND NVL(TO_DATE(:P308_TO_DATE, 'DD-MON-YYYY'),TRUNC(TRANS.CREATED_ON) )
+    GROUP BY
+               GRND_ID ,
+               COMPANY_ORDER_NO,
+               PURCHASING_TYPE,
+               ITEM_ID,
+               ITEM_NAME,
+               RECEIVED_BAGS,
+               PER_BAGS,
+               (RECEIVED_BAGS*PER_BAGS) ,
+               WAREHOUSE_NAME,
+               C.DET_TYPE,
+               VENDOR_NAME,
+               TRANS.CREATED_ON,
+               TRANS.CREATED_BY,
+               TRANS.WAREHOUSE_ID,
+               TRANS.LO_DET_ID ) C ON C.ITEM_ID = SD.ITEM_ID
+            
+            GROUP BY 
+             SD.ITEM_ID,
+    SD.ITEM_NAME,
+    SD.OPENING_BAGS,
+    SD.GRN_BAGS,
+    SD.AMANAT_BAGS,
+    SD.TOTAL_AVAILABLE_STOCK,
+    SD.PENDING_BAGS,
+    SD.DUMPING_BAGS,
+    SD.TRADE_BAGS,
+   -- PN.PARTY_NAME,
+    OB.ORDER_BAGS,
+   OS.LIFT_BAGS,
+C.RECEIVED_BAGS,
+  C.FROM_WAREHOUSE,
+    C.TO_WAREHOUSE
+
+ORDER BY 
+    SD.ITEM_ID ASC;
+
