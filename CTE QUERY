@@ -3,7 +3,7 @@ WITH TAX_POLICY AS (
                     POLICY_ID,
                     FED,
                     GST,
-                    AIT 
+                    AIT
                 FROM
                     AB_SETUP_POLICY_REGISTERED SPR
                 WHERE
