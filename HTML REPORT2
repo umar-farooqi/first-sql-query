@@ -1,0 +1,92 @@
+DECLARE
+    CURSOR item_cursor IS
+        SELECT IM.ITEM_ID,
+               IM.ITEM_TYPE_ID,
+               IM.ITEM_NAME,
+               IM.BRAND_NAME_ID,
+               MAX(CASE WHEN LD.DET_ID = IM.MAIN_CATEGORY_ID THEN LD.LOOKUP_DET_NAME END) AS MAIN_CATEGORY,
+               MAX(CASE WHEN LD.DET_ID = IM.PRODUCT_CATEGORY_ID THEN LD.LOOKUP_DET_NAME END) AS PRODUCT_CATEGORY,
+               MAX(CASE WHEN LD.DET_ID = IM.ITEM_TYPE_ID THEN LD.LOOKUP_DET_NAME END) AS ITEM_TYPE,
+               MAX(CASE WHEN LD.DET_ID = IM.BRAND_NAME_ID THEN LD.LOOKUP_DET_NAME END) AS BRAND_NAME,
+               PACKING_SIZE || ' (' || IM.UNIT || ') ' || PACKING AS PACKING_SIZE,
+               CASE WHEN IM.STATUS = 'Y' THEN 'Open' ELSE 'Close' END AS STATUS,
+               IM.REMARKS,
+               IM.CREATED_BY,
+               IM.CREATED_ON
+          FROM AB_ITEMS_MASTER IM
+               JOIN AB_LOOKUP_DETAIL LD
+                 ON LD.DET_ID IN (IM.PRODUCT_CATEGORY_ID, IM.ITEM_TYPE_ID, IM.BRAND_NAME_ID, IM.MAIN_CATEGORY_ID)
+         GROUP BY IM.ITEM_ID,
+                  IM.ITEM_TYPE_ID,
+                  IM.ITEM_NAME,
+                  PACKING_SIZE || ' (' || IM.UNIT || ') ' || PACKING,
+                  CASE WHEN IM.STATUS = 'Y' THEN 'Open' ELSE 'Close' END,
+                  IM.REMARKS,
+                  IM.BRAND_NAME_ID,
+                  IM.CREATED_BY,
+                  IM.CREATED_ON;
+BEGIN
+    -- HTML Header
+    HTP.P('<!DOCTYPE html>');
+    HTP.P('<html lang="en">');
+    HTP.P('<head>');
+    HTP.P('<meta charset="UTF-8">');
+    HTP.P('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
+    HTP.P('<title>Item Master Report</title>');
+    HTP.P('<style>');
+    HTP.P('body { font-family: Arial, sans-serif; margin: 20px; }');
+    HTP.P('h2 { text-align: center; color: #4CAF50; }');
+    HTP.P('table { width: 100%; border-collapse: collapse; margin-top: 20px; }');
+    HTP.P('th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }');
+    HTP.P('th { background-color: #f2f2f2; color: black; }');
+    HTP.P('tr:nth-child(even) { background-color: #f9f9f9; }');
+    HTP.P('tr:hover { background-color: #f1f1f1; }');
+    HTP.P('</style>');
+    HTP.P('</head>');
+    HTP.P('<body>');
+    HTP.P('<h2>Item Master Report</h2>');
+    HTP.P('<table>');
+    HTP.P('<thead>');
+    HTP.P('<tr>');
+    HTP.P('<th>Item ID</th>');
+    HTP.P('<th>Item Type ID</th>');
+    HTP.P('<th>Item Name</th>');
+    HTP.P('<th>Brand Name ID</th>');
+    HTP.P('<th>Main Category</th>');
+    HTP.P('<th>Product Category</th>');
+    HTP.P('<th>Item Type</th>');
+    HTP.P('<th>Brand Name</th>');
+    HTP.P('<th>Packing Size</th>');
+    HTP.P('<th>Status</th>');
+    HTP.P('<th>Remarks</th>');
+    HTP.P('<th>Created By</th>');
+    HTP.P('<th>Created On</th>');
+    HTP.P('</tr>');
+    HTP.P('</thead>');
+    HTP.P('<tbody>');
+
+    -- Fetch and display data
+    FOR item_rec IN item_cursor LOOP
+        HTP.P('<tr>');
+        HTP.P('<td>' || item_rec.ITEM_ID || '</td>');
+        HTP.P('<td>' || item_rec.ITEM_TYPE_ID || '</td>');
+        HTP.P('<td>' || item_rec.ITEM_NAME || '</td>');
+        HTP.P('<td>' || item_rec.BRAND_NAME_ID || '</td>');
+        HTP.P('<td>' || NVL(item_rec.MAIN_CATEGORY, 'N/A') || '</td>');
+        HTP.P('<td>' || NVL(item_rec.PRODUCT_CATEGORY, 'N/A') || '</td>');
+        HTP.P('<td>' || NVL(item_rec.ITEM_TYPE, 'N/A') || '</td>');
+        HTP.P('<td>' || NVL(item_rec.BRAND_NAME, 'N/A') || '</td>');
+        HTP.P('<td>' || NVL(item_rec.PACKING_SIZE, 'N/A') || '</td>');
+        HTP.P('<td>' || item_rec.STATUS || '</td>');
+        HTP.P('<td>' || NVL(item_rec.REMARKS, 'N/A') || '</td>');
+        HTP.P('<td>' || item_rec.CREATED_BY || '</td>');
+        HTP.P('<td>' || TO_CHAR(item_rec.CREATED_ON, 'DD-MON-YYYY') || '</td>');
+        HTP.P('</tr>');
+    END LOOP;
+
+    -- HTML Footer
+    HTP.P('</tbody>');
+    HTP.P('</table>');
+    HTP.P('</body>');
+    HTP.P('</html>');
+END;
