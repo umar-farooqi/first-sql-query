@@ -44,3 +44,68 @@ if (fileInput.files.length > 0) {
   };
   fileReader.readAsArrayBuffer(file);
 }
+=========================================================================================================================================
+new updateion 
+
+--     DECLARE
+--            l_blob    BLOB;
+--            V_ID      NUMBER;
+--            V_DOCUMENTS_TYPE VARCHAR2(200);
+--     BEGIN
+--          SELECT MAX(DOC_ID) + 1 INTO V_ID FROM AB_DOCUMENT_RECORDS;
+--          V_DOCUMENTS_TYPE := SUBSTR(:P591_DOCUMENT, INSTR(:P591_DOCUMENT, '.', -1) + 1);
+--     ------------------------------BG IMAGE-----------------------------------------------
+--         IF :P591_DOCUMENT IS NOT NULL THEN
+--             SELECT BLOB_CONTENT INTO l_blob FROM apex_application_temp_files
+--             WHERE NAME = :P591_DOCUMENT;
+--             blob_to_file(
+--                 p_blob     => l_blob,
+--                 p_dir      => 'AKB',
+--                 p_filename => V_ID||V_DOCUMENTS_TYPE
+--             );
+--             INSERT INTO AB_DOCUMENT_RECORDS(DOC_ID , DOC_TYPE_ID, DOC_TYPE, STATUS, DOCUMENTS_TYPE)
+--             VALUES (V_ID, :P591_LIMIT_ID, 'LIMIT UTILIZATION', 'Y',V_DOCUMENTS_TYPE);
+--         END IF;
+--     ------------------------------END-----------------------------------------------
+-- END;
+--------------------------multiple pic add 
+
+DECLARE
+    l_blob    BLOB;
+    V_ID      NUMBER;
+    V_DOCUMENTS_TYPE VARCHAR2(200);
+BEGIN
+    -- Loop to process all uploaded files
+    FOR rec IN (
+        SELECT name
+        FROM apex_application_temp_files
+        WHERE name IN (
+            SELECT column_value 
+            FROM apex_string.split(:P591_DOCUMENT, ':')
+        )
+    )
+    LOOP
+        -- Generate unique DOC_ID for each file
+        SELECT NVL(MAX(DOC_ID), 0) + 1 INTO V_ID FROM AB_DOCUMENT_RECORDS;
+
+        -- Get file extension
+        V_DOCUMENTS_TYPE := SUBSTR(rec.name, INSTR(rec.name, '.', -1) + 1);
+
+        -- Load file blob
+        SELECT BLOB_CONTENT INTO l_blob
+        FROM apex_application_temp_files
+        WHERE NAME = rec.name;
+
+        -- Save file to AKB directory
+        blob_to_file(
+            p_blob     => l_blob,
+            p_dir      => 'AKB',
+            p_filename => V_ID || V_DOCUMENTS_TYPE
+        );
+
+        -- Insert file record in table
+        INSERT INTO AB_DOCUMENT_RECORDS(DOC_ID, DOC_TYPE_ID, DOC_TYPE, STATUS, DOCUMENTS_TYPE)
+        VALUES (V_ID, :P591_LIMIT_ID, 'LIMIT UTILIZATION', 'Y', V_DOCUMENTS_TYPE);
+
+    END LOOP;
+END;
