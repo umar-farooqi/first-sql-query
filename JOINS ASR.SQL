@@ -22,4 +22,33 @@
         GROUP BY
             SO.SO_ID,
             USER_NAME
- )
+ )    
+
+------------------------------- IS QUEYR ME AB_SETUP_REGISTRATION ME SY SARY VALUE LI HOI HA IN DONO QUERY MAY -------------
+  WITH LOV_DATE AS(
+                              SELECT
+                                    PO.PO_ID,
+                                    PO.PURCHASING_TYPE,
+                                    MAX(CASE WHEN SR.REG_TYPE = 'CUSTOMER REGISTRATION' AND SR.SR_ID = PO.CUSTOMER_ID THEN SR.REG_NAME END) AS CUSTOMER_NAME,
+                                    MAX(CASE WHEN SR.REG_TYPE = 'COMPANY' AND SR.SR_ID = PO.COMPANY_ID THEN SR.REG_NAME END) AS COMPANY_NAME,
+                                    MAX(CASE WHEN LD.DET_ID = PO.PAYMENT_MODE_ID THEN LD.LOOKUP_DET_NAME END) AS PAYMENT_MODE,
+                                    MAX(CASE WHEN SR.REG_TYPE = 'VENDOR' AND SR.SR_ID = PO.VENDOR_ID THEN SR.PARTY_NAME END) AS VENDOR_NAME,
+                                    MAX(CASE WHEN SR.REG_TYPE = 'CUSTOMER REGISTRATION' AND SR.SR_ID = PO.FREIGHT_PARTY_ID THEN SR.REG_NAME END) AS FREIGHT_PARTY,
+                                    AU.USER_NAME,
+                                        TO_CHAR(PO.CREATED_ON, 'DD-MON-YYYY') AS CREATED_ON
+                              FROM
+                                              AB_PO_PURCHASE_ORDER PO
+                                     JOIN   AB_PO_PURCHASE_ORDER_DET POD ON POD.PO_ID=PO.PO_ID
+                                     JOIN   AB_LOOKUP_DETAIL LD ON LD.DET_ID = PO.PAYMENT_MODE_ID
+                                LEFT JOIN   AB_UM_APPLICATION_USERS AU ON AU.USER_ID = PO.SALE_OFFICER_ID 
+                                     JOIN AB_SETUP_REGISTRATION SR ON SR.SR_ID = PO.VENDOR_ID 
+                                                                   OR SR.SR_ID = PO.CUSTOMER_ID 
+                                                                   OR SR.SR_ID = PO.COMPANY_ID
+                                                                   OR SR.SR_ID = PO.FREIGHT_PARTY_ID
+
+               GROUP BY
+                            PO.PO_ID,
+                            PO.PURCHASING_TYPE,
+                            AU.USER_NAME,
+                            PO.CREATED_ON
+)
