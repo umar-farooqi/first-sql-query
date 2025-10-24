@@ -1,6 +1,8 @@
 -- THIS QUERY INCLUDE CLOSING BALANCE ----
 
 ---SALE----------
+
+
 WITH SHIPMENTS AS (
   SELECT so_id AS shipment_so_id
   FROM AB_SO_ORDER_HEAD
@@ -180,10 +182,7 @@ FROM
     AB_PO_PURCHASE_ORDER PO
     JOIN AB_ITEMS_MASTER IM ON IM.ITEM_ID = PO.ITEM_IDD
     JOIN AB_PO_PURCHASE_ORDER_DET POD ON POD.PO_ID = PO.PO_ID
-    JOIN AB_SETUP_REGISTRATION ASR ON ASR.SR_ID = POD.CO_AGENCY_ID 
-                                   OR ASR.SR_ID = POD.CO_VENDOR_ID 
-                                   OR ASR.SR_ID = POD.WAREHOUSE_ID
-                                   OR ASR.SR_ID = POD.COMPANY_IDD
+ 
 WHERE 
     PO.PO_TYPE = 'OPENING PRODUCT'
     AND PO.ORG_ID = :GV_ORG_ID
@@ -238,10 +237,7 @@ OPENING_QUERY AS (
         AB_PO_PURCHASE_ORDER PO
         JOIN AB_ITEMS_MASTER IM ON IM.ITEM_ID = PO.ITEM_IDD
         JOIN AB_PO_PURCHASE_ORDER_DET POD ON POD.PO_ID = PO.PO_ID
-        JOIN AB_SETUP_REGISTRATION ASR ON ASR.SR_ID = POD.CO_AGENCY_ID 
-                                       OR ASR.SR_ID = POD.CO_VENDOR_ID 
-                                       OR ASR.SR_ID = POD.WAREHOUSE_ID
-                                       OR ASR.SR_ID = POD.COMPANY_IDD
+    
     WHERE 
         PO.PO_TYPE = 'OPENING PRODUCT'
         AND PO.ORG_ID = :GV_ORG_ID
