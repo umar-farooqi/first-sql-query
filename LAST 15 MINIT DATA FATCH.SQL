@@ -1,0 +1,3 @@
+SELECT *
+FROM ab_so_order_head
+WHERE CREATED_ON >= SYSDATE - (15/1440);
