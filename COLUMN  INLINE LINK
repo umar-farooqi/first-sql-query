@@ -1,0 +1,9 @@
+CASE
+                WHEN VOU.VOUCHER_TYPE_ID = 612 THEN
+'<a href="' || APEX_PAGE.GET_URL( p_page   => 229, 
+p_items  => 'P229_VOUCHER_NO',   p_values => VOU.VOUCHER_NO ) ||
+'" class="voucher-link">' ||  VOU.VOUCHER_NO ||  
+'</a>'
+                ELSE
+                    TO_CHAR(VOU.VOUCHER_NO)
+            END AS VOUCHER_NO,
